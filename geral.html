@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Reserva do Parque — Visão Geral</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,sans-serif;background:#a4cf8e}
+  #map{width:100%;height:100%}
+  .leaflet-container{background:#a4cf8e}
+  .faixa{position:fixed;top:0;left:0;right:0;z-index:900;background:#f59e0b;color:#1a1a1a;text-align:center;font-weight:700;font-size:12px;padding:4px 8px}
+  #hud{position:fixed;top:24px;left:0;right:0;z-index:900;background:rgba(10,60,30,.92);color:#fff;padding:10px 12px 12px;border-radius:0 0 14px 14px}
+  #hud h1{margin:0;font-size:15px}
+  #hud .sub{font-size:12px;opacity:.85;margin-top:2px}
+  .botoes{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .botoes a,.botoes button{flex:1;min-width:96px;text-align:center;background:#fff;color:#14532d;border:0;border-radius:8px;padding:8px 6px;font-weight:700;font-size:13px;text-decoration:none;cursor:pointer}
+  .botoes a.f3d{background:#1d4ed8;color:#fff}
+  .botoes button,.botoes a{padding:7px 4px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="hud">
+  <h1>Reserva do Parque — Visão Geral</h1>
+  <div class="sub">Jardim dos Jacarandás, Jardim dos Angicos e Jardim das Aroeiras — Senador Canedo/GO</div>
+  <div class="botoes">
+    <button onclick="zoomFase('jacarandas')">Jacarandás</button>
+    <button onclick="zoomFase('angicos')">Angicos</button>
+    <button onclick="zoomFase('aroeiras')">Aroeiras</button>
+    <a class="f3d" href="mapa3d/">Visão 3D + Sol →</a>
+    <a href="./">Mapa de lotes →</a>
+  </div>
+</div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const BBOX=[[-49.148627,-16.684307],[-49.121441,-16.657201]];
+const FASE={jacarandas:[[-49.145911,-16.681770],[-49.130901,-16.668209]],angicos:[[-49.1424105,-16.6698121],[-49.1331422,-16.6588858]],aroeiras:[[-49.1367777,-16.6706651],[-49.1298749,-16.6575009]]};
+const map=L.map('map',{minZoom:12,maxZoom:19,zoomControl:false,attributionControl:false});
+L.tileLayer('mapa3d/tiles3d/{z}/{x}/{y}.png?v=4',{tileSize:256,minZoom:10,maxNativeZoom:19,maxZoom:19}).addTo(map);
+function ll(b){return L.latLngBounds([[b[0][1],b[0][0]],[b[1][1],b[1][0]]]);}
+function zoomFase(f){map.flyToBounds(ll(FASE[f]),{padding:[24,60],duration:.8});}
+map.fitBounds(ll([[-49.145911,-16.681770],[-49.1298749,-16.6575009]]),{padding:[2,2]});
+L.control.zoom({position:'bottomright'}).addTo(map);
+setTimeout(()=>map.setZoom(map.getZoom()+0.25),300);
+</script>
+</body>
+</html>

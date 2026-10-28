@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Reserva do Parque — Planta ilustrada</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+@media (max-width:640px){
+  #painel{max-height:38%}
+  #painel #ptit{padding:6px 10px;font-size:13px}
+  #nota{font-size:11px;padding:6px 10px;max-height:2.6em;overflow:hidden}
+  #nota:not(.col){max-height:60%}
+  #hud select{padding:6px!important;font-size:13px!important}
+}
+</style>
+<style>
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+  #map{position:absolute;inset:0;background:#f4f1ea}
+  #hud{position:absolute;top:0;left:0;right:0;z-index:1000;background:#14532d;color:#fff;padding:8px 12px;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #hud .tag{background:#f59e0b;color:#111;font-weight:700;font-size:11px;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+  #hud select,#hud input{font-size:15px;padding:5px;border-radius:6px;border:0}
+  #painel{position:absolute;top:52px;right:8px;z-index:1000;background:rgba(255,255,255,.97);border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.25);width:290px;max-height:calc(100% - 130px);display:flex;flex-direction:column;overflow:hidden}
+  #painel h2{font-size:14px;margin:0;padding:10px 12px 6px;color:#14532d;cursor:pointer;user-select:none}
+  #painel h2::after{content:' ▾';float:right;color:#14532d}
+  #painel.col h2::after{content:' ▴'}
+  #painel.col .sub,#painel.col #lotes{display:none}
+  #nota{cursor:pointer;user-select:none}
+  #nota.col{max-height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  #nota.col::after{content:' ▴';float:right;color:#fbbf24}
+  #nota:not(.col)::after{content:' ▾';float:right;color:#fbbf24}
+  #painel .sub{font-size:11px;color:#555;padding:0 12px 8px}
+  #lotes{overflow-y:auto;font-size:13px;padding:0 6px 8px}
+  #lotes table{width:100%;border-collapse:collapse}
+  #lotes td,#lotes th{border-bottom:1px solid #eee;padding:4px 6px;text-align:left;font-size:12.5px}
+  .chip{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:9px;white-space:nowrap}
+  .chip.livre{background:#dcfce7;color:#166534}
+  .chip.embreve{background:#f3f4f6;color:#6b7280}.chip.consultar{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+  .chip.reservado{background:#ffedd5;color:#9a3412}
+  .chip.vendido{background:#fee2e2;color:#b91c1c}
+  td .val{display:block;font-size:11px;color:#374151;white-space:nowrap}
+  #leg{position:absolute;top:auto;left:56px;z-index:1000;display:flex;gap:6px;flex-wrap:wrap;bottom:auto}
+  #leg .chip{box-shadow:0 1px 4px rgba(0,0,0,.2);font-size:11px;padding:3px 9px}
+  #lotes tr.sel td{background:#dcfce7;font-weight:700}
+  #nota{position:absolute;bottom:8px;left:8px;right:8px;z-index:1000;background:rgba(17,24,39,.88);color:#e5e7eb;font-size:11px;line-height:1.45;padding:8px 10px;border-radius:8px}
+  #nota b{color:#fbbf24}
+  .norte{position:absolute;z-index:900;pointer-events:none}
+  @media (max-width:640px){
+    #painel{width:calc(100% - 16px);max-height:44%;top:auto;bottom:64px;right:8px}
+    #nota{font-size:10px}
+    #hud{font-size:12px;padding:5px 8px;gap:6px}
+    #hud strong{font-size:13px}
+    #hud select{flex:1;min-width:0;font-size:13px!important;padding:5px!important}
+  }
+  #det.min{max-height:56px!important;overflow:hidden!important}
+  #det.min #detb{display:none}
+  #det.min #detgchev{transform:rotate(180deg)}
+</style>
+</head>
+<body>
+<div id="hud">
+  <a id="lnk3d" href="mapa3d/" style="font-size:11px;font-weight:700;color:#86efac;text-decoration:none;border:1px solid #16a34a;border-radius:9px;padding:2px 8px;white-space:nowrap">Versão 3D (experimental) →</a>
+  <strong>Reserva do Parque — planta ilustrada</strong>
+  <select id="fase"></select>
+  <select id="quadra"></select>
+</div>
+<div id="map"></div>
+<div id="leg"></div>
+<div id="painel">
+  <h2 id="ptit">Escolha a fase e a quadra</h2>
+  <div class="sub" id="psub">Áreas e dimensões conforme listagens oficiais do parcelamento (documentos assinados, verificação 1doc).</div>
+  <div id="lotes"></div>
+</div>
+<div id="nota">
+  <b>Aviso:</b> versão ilustrada da prancha oficial de implantação (nada acrescentado). Situação dos lotes (bolinhas): conforme o mapa da incorporadora em 27/10/2026 — reservas valem por até 24h. Valores: tabelas oficiais outubro/2026 (vigência 01/10/2026). <b>Confirme disponibilidade e condições pelo WhatsApp</b>
+  <a style="color:#86efac" href="https://wa.me/5562981428585">62 98142-8585</a>. Quadras ainda não liberadas aparecem sem bolinha; lote "Em breve" fica sem preço enquanto isso.
+  Norte conforme a prancha; análise de insolação por lote é estimativa visual, pendente de georreferenciamento.
+  Uso do solo e do subsolo: pendentes de fonte oficial.
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const TILESETS = {
+  jacarandas: {url:'mapa/tiles/{z}/{x}_{y}.png?v=6', W:11134, H:7875, F:32, zn:6, draw:[[-215.6,32.8],[-32.8,228.1]]},
+  aroeiras: {url:'mapa/tiles-aroeiras/{z}/{x}_{y}.png?v=6', W:18725, H:13245, F:64, zn:6, draw:[[-149.1,65.0],[-59.8,225.4]]},
+  angicos: {url:'mapa/tiles-angicos/{z}/{x}_{y}.png?v=5', W:13245, H:9362, F:64, zn:6, draw:[[-114.1,37.1],[-41.0,163.9]]}
+};
+let DRAW = TILESETS.jacarandas.draw;
+let tileLayer = null;
+function trocaTiles(fk){
+  const ts = TILESETS[fk] || TILESETS.jacarandas;
+  const mLat = ts.H/ts.F, mLng = ts.W/ts.F;
+  if (tileLayer) map.removeLayer(tileLayer);
+  tileLayer = L.tileLayer(ts.url, {tileSize:256, noWrap:true, maxNativeZoom:ts.zn, bounds:[[-mLat,0],[0,mLng]]}).addTo(map);
+  { const d=ts.draw; map.setMaxBounds([[d[0][0]-10,d[0][1]-12],[d[1][0]+10,d[1][1]+17]]); }
+  DRAW = ts.draw;
+}
+const W = 11134, H = 7875, ZMAX = 5, F = Math.pow(2, ZMAX);
+const maxLat = H / F, maxLng = W / F;
+const map = L.map('map', {crs: L.CRS.Simple, minZoom: 0, maxZoom: 6, zoomSnap: 0.25, zoomDelta: 0.5,
+  maxBounds: [[-maxLat,0],[0,maxLng]], maxBoundsViscosity: 0.8, attributionControl: false, wheelPxPerZoomLevel: 90});
+
+map.setMaxBounds([[-225,20],[-22,245]]);
+let focouQ = false;
+function fitTudo(force){ if (focouQ && !force) return; map.invalidateSize(); map.fitBounds(DRAW, {padding:[6,6]}); map.setMinZoom(Math.max(0, map.getZoom()-1.5)); }
+fitTudo();
+setTimeout(fitTudo, 400); setTimeout(fitTudo, 1200); setTimeout(fitTudo, 3000);
+const homeCtl = L.control({position:'topleft'});
+homeCtl.onAdd = ()=>{ const b = L.DomUtil.create('button',''); b.innerHTML = '&#9974;'; b.title = 'Ver o mapa inteiro'; b.style.cssText = 'width:34px;height:64px;font-size:17px;background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;display:block;margin-top:4px'; b.onclick = (e)=>{e.preventDefault(); focouQ=false; fitTudo(true);}; return b; };
+homeCtl.addTo(map);
+function ajustaZoom(){const t=(document.getElementById('hud').offsetHeight+6)+'px';document.querySelectorAll('.leaflet-top .leaflet-control').forEach(z=>z.style.marginTop=t);}
+window.addEventListener('load',ajustaZoom);window.addEventListener('resize',ajustaZoom);setTimeout(ajustaZoom,300);setTimeout(ajustaZoom,1500);
+new ResizeObserver(ajustaZoom).observe(document.getElementById('hud'));
+// indicador de norte (norte da prancha = topo da imagem)
+Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.json?v=6').then(r=>r.json()), fetch('mapa/pins.json?v=8').then(r=>r.json()).catch(()=>({}))]).then(([data, plano, pins])=>{
+  const faseSel = document.getElementById('fase'), quadraSel = document.getElementById('quadra');
+  const painel = document.getElementById('painel'), nota = document.getElementById('nota');
+  const leg = document.getElementById('leg');
+  function ajustaLeg(){leg.style.top=(document.getElementById('hud').offsetHeight+8)+'px';}
+  window.addEventListener('load',ajustaLeg);window.addEventListener('resize',ajustaLeg);setTimeout(ajustaLeg,300);setTimeout(ajustaLeg,1500);
+  if (matchMedia('(max-width:640px)').matches){ painel.classList.add('col'); nota.classList.add('col'); }
+  document.getElementById('ptit').onclick = ()=>painel.classList.toggle('col');
+  document.getElementById('detgrip').onclick = (e)=>{ if (e.target.id!=='detc') document.getElementById('det').classList.toggle('min'); };
+  nota.onclick = ()=>nota.classList.toggle('col');
+  const ptit = document.getElementById('ptit'), lotes = document.getElementById('lotes');
+  for (const k of Object.keys(data)) faseSel.add(new Option(data[k].fase, k));
+  { const kj = Object.keys(data).find(k => (data[k].fase||'').toLowerCase().includes('jacarand')); if (kj) faseSel.value = kj; }
+  function fillQuadras(){
+    trocaTiles(pkey(data[faseSel.value].fase));
+    quadraSel.innerHTML = '';
+    const qs = Object.keys(data[faseSel.value].quadras);
+    for (const q of qs) quadraSel.add(new Option('Quadra ' + q, q));
+    const pk0 = pkey(data[faseSel.value].fase);
+    const rows0 = pk0 && plano[pk0] ? plano[pk0].rows : {};
+    const comTab = qs.filter(q => Object.keys(rows0).some(k => k.startsWith(q + '-')));
+    if (comTab.length) quadraSel.value = comTab.map(q=>[q, Object.keys(rows0).filter(k=>k.startsWith(q+'-')).length]).sort((a,b)=>b[1]-a[1] || a[0]-b[0])[0][0];
+    fillLotes();
+    buildPins();
+  }
+  let focoUsuario = false;
+  const pinsLayer = L.layerGroup().addTo(map); // numeros (zoom alto)
+  const dotsLayer = L.layerGroup().addTo(map); // bolinhas (zoom baixo)
+  let quadraHL = null;
+  function pinInfo(l){
+    const vend = l.disp==='vendido' || l.status==='vendido';
+    const resv = l.disp==='reservado' || l.status==='reservado';
+    const livrTab = l.status==='tabela_out2026' && !vend && !resv;
+    const livr = l.disp==='livre' || (livrTab && !l.disp);
+    if (vend) return {cor:'#dc2626', clica:false, tipo:'v'};
+    if (resv) return {cor:'#ea580c', clica:false, tipo:'r'};
+    if (livr) return {cor:'#16a34a', clica:livrTab, tipo:'l'};
+    return null;
+  }
+  function buildPins(){
+    pinsLayer.clearLayers(); dotsLayer.clearLayers();
+    const d = data[faseSel.value], pk = pkey(d.fase);
+    const pq = pk && pins[pk] ? pins[pk] : {};
+    let nL=0,nR=0,nV=0;
+    for (const q of Object.keys(d.quadras)){
+      const qp = pq[q]; if (!qp) continue;
+      const lotesQ = d.quadras[q] || {};
+      for (const id of Object.keys(qp)){
+        const pi = pinInfo(lotesQ[id] || {}); if (!pi) continue;
+        if (pi.tipo==='l') nL++; else if (pi.tipo==='r') nR++; else nV++;
+        const pos = qp[id];
+        const dot = L.circleMarker(pos, {radius:5, color:'#fff', weight:1.2, fillColor:pi.cor, fillOpacity:0.95});
+        if (pi.clica) dot.on('click', ()=>mostraFluxo(faseSel.value, q, id));
+        dot.addTo(dotsLayer);
+        const ic = L.divIcon({className:'', html:`<div style="background:${pi.cor};color:#fff;border:1.5px solid #fff;border-radius:9px;min-width:17px;height:17px;font:700 10.5px system-ui;text-align:center;line-height:17px;padding:0 2px;box-shadow:0 1px 2px rgba(0,0,0,.35)">${id}</div>`, iconSize:null});
+        const m = L.marker(pos, {icon:ic});
+        if (pi.clica) m.on('click', ()=>mostraFluxo(faseSel.value, q, id));
+        m.addTo(pinsLayer);
+      }
+    }
+    leg.innerHTML = `<span class="chip livre">Disponível ${nL}</span><span class="chip reservado">Reservado ${nR}</span><span class="chip vendido">Vendido ${nV}</span>`;
+    aplicaZoomPins();
+  }
+  function aplicaZoomPins(){
+    const nums = map.getZoom() >= 3.5;
+    if (nums){ if (map.hasLayer(dotsLayer)) map.removeLayer(dotsLayer); if (!map.hasLayer(pinsLayer)) pinsLayer.addTo(map); }
+    else { if (map.hasLayer(pinsLayer)) map.removeLayer(pinsLayer); if (!map.hasLayer(dotsLayer)) dotsLayer.addTo(map); }
+  }
+  map.on('zoomend', aplicaZoomPins);
+  function fitQuadra(bb){
+    const size = map.getSize();
+    const se = map.project(bb.getSouthEast(), 0), nw = map.project(bb.getNorthWest(), 0);
+    const wu = Math.max(1e-6, Math.abs(se.x - nw.x)), hu = Math.max(1e-6, Math.abs(se.y - nw.y));
+    const aspBB = wu / hu, aspScr = size.x / size.y;
+    if (aspBB > aspScr * 0.4 && aspBB < aspScr * 2.5){ map.fitBounds(bb.pad(0.25)); return; }
+    let z;
+    if (aspBB >= aspScr * 2.5) z = Math.log2(0.5 * size.y / hu);
+    else z = Math.log2(0.65 * size.x / wu);
+    const zFit = map.getBoundsZoom(bb.pad(0.15), false);
+    z = Math.max(zFit, Math.min(z, 5.5));
+    const c = map.project(bb.getCenter(), z); c.y -= size.y * 0.10;
+    map.setView(map.unproject(c, z), z);
+  }
+  function focusQuadra(q){
+    if (quadraHL){ map.removeLayer(quadraHL); quadraHL=null; }
+    const d = data[faseSel.value], pk = pkey(d.fase);
+    const qp = pk && pins[pk] ? pins[pk][q] : null;
+    if (!qp) return null;
+    const pts = Object.keys(qp).map(id=>qp[id]);
+    if (!pts.length) return null;
+    const bb = L.latLngBounds(pts);
+    quadraHL = L.rectangle(bb.pad(0.15), {color:'#1d4ed8', weight:2, dashArray:'6 4', fillColor:'#1d4ed8', fillOpacity:0.05}).addTo(map);
+    return bb;
+  }
+  function fillLotes(){
+    const d = data[faseSel.value], q = quadraSel.value, lotesQ = d.quadras[q] || {};
+    const ids = Object.keys(lotesQ);
+    ptit.textContent = d.fase.split('— ')[1] + ' — Quadra ' + q + ' (' + ids.length + ' lotes listados)';
+    const brl = v => v ? 'R$ ' + Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0}) : '';
+    let livres = 0;
+    const pkq = pkey(d.fase), temTab = pkq && plano[pkq] && Object.keys(plano[pkq].rows||{}).some(k=>k.startsWith(q+'-'));
+    let html = '';
+    if (!temTab) html += `<div style="padding:8px 10px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;margin-bottom:6px;font-size:13px">Quadra ainda sem tabela oficial liberada — valores e disponibilidade só pela equipe.<br><a href="https://wa.me/5562981428585?text=${encodeURIComponent('Olá! Quero consultar a quadra '+q+' ('+d.fase+').')}" style="display:block;margin-top:6px;text-align:center;background:#0a6b3d;color:#fff;padding:10px;border-radius:8px;text-decoration:none;font-weight:700">Consultar pelo WhatsApp</a></div>`;
+    html += '<table><tr><th>Lote</th><th>Área (m²)</th><th>Logradouro</th><th>Situação</th></tr>';
+    for (const id of ids){
+      const l = lotesQ[id];
+      let st;
+      if (l.disp === 'livre' && l.status !== 'tabela_out2026'){
+        st = '<span class="chip livre">Livre</span><span class="val">valor sob consulta</span>';
+      } else if (l.status === 'tabela_out2026'){
+        livres++;
+        const vals = [l.valor_avista && brl(l.valor_avista)+' à vista', l.valor_proposta && brl(l.valor_proposta)+' proposta'].filter(Boolean).join('<br>');
+        st = `<span class="chip livre">Livre</span><span class="val">${vals}</span>`;
+      } else {
+        st = '<span class="chip embreve">Em breve</span>';
+      }
+      const vend = l.disp === 'vendido' || l.status === 'vendido', resv = l.disp === 'reservado' || l.status === 'reservado';
+      const diverg = l.status === 'divergente_app_vendido_consta_tabela';
+      const clic = (!vend && !resv && l.status === 'tabela_out2026') ? ` data-lote="${id}" style="cursor:pointer"` : '';
+      if (vend) st = '<span class="chip vendido">Vendido</span>';
+      else if (resv) st = '<span class="chip reservado">Reservado</span>';
+      else if (diverg) st = '<span class="chip consultar">Consultar</span>';
+      html += `<tr${clic}><td>${id}</td><td>${l.area_m2==null?'\u2014':l.area_m2.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>${l.logradouro}</td><td>${st}</td></tr>`;
+    }
+    lotes.innerHTML = html + '</table>';
+    lotes.querySelectorAll('tr[data-lote]').forEach(tr => tr.onclick = ()=>mostraFluxo(faseSel.value, q, tr.dataset.lote));
+    if (focoUsuario){
+      const bb = focusQuadra(q);
+      if (bb){ focouQ = true; fitQuadra(bb); } else { focouQ = false; }
+    } else { focouQ = false; fitTudo(true); }
+  }
+  const pkey = f => f.toLowerCase().includes('aroeira') ? 'aroeiras' : f.toLowerCase().includes('jacarand') ? 'jacarandas' : f.toLowerCase().includes('angico') ? 'angicos' : null;
+  let detDoc = null;
+  function mostraFluxo(fase, quadra, lote){
+    const det = document.getElementById('det'), detb = document.getElementById('detb');
+    const pk = pkey(data[fase].fase);
+    const row = pk && plano[pk] && plano[pk].rows ? plano[pk].rows[quadra + '-' + lote] : null;
+    const meta = pk && plano[pk] ? plano[pk].meta : null;
+    let nome = data[fase].fase.split('— ')[1] || data[fase].fase;
+    if (!row){
+      detb.innerHTML = `<b>${nome} — Quadra ${quadra}, Lote ${lote}</b><p>Fluxo de pagamento detalhado não consta para este lote na tabela de outubro/2026 extraída. Confira pelo WhatsApp.</p><a href="https://wa.me/5562981428585?text=${encodeURIComponent('Olá! Quero consultar o lote '+lote+', quadra '+quadra+' ('+nome+').')}" style="display:block;margin-top:8px;text-align:center;background:#0a6b3d;color:#fff;padding:12px;border-radius:8px;text-decoration:none;font-weight:700">Consultar pelo WhatsApp</a><div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px"><b>Sinal + taxa administrativa de R$ 150,00</b> — taxa fixa por lote, cobrada com o sinal e n&atilde;o somada &agrave;s parcelas.</div>`;
+      document.getElementById('detgsum').textContent = `${nome} — Q${quadra} · Lote ${lote}`;
+      det.style.display='block';
+      if (matchMedia('(max-width:640px)').matches) det.classList.add('min'); else det.classList.remove('min');
+      detDoc=null; return;
+    }
+    const p13 = meta.prazos13, pav = meta.prazosAv;
+    const numS = s => { if (s==null || s==='') return null; const v = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return isNaN(v) ? null : v; };
+    const fmtN = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+    const speN = numS(row.spe) ?? 150;
+    const atoN = numS(row.ato), com3N = numS(row.com3);
+    const sinalTot = atoN != null ? atoN + (com3N != null ? 3*com3N : 0) : null;
+    const linhaTaxa1 = sinalTot != null
+      ? `<b>Sinal (Ato total): R$ ${fmtN(sinalTot)} + taxa adm R$ ${fmtN(speN)} = R$ ${fmtN(sinalTot+speN)}</b> — taxa por lote conforme a tabela oficial, não somada às parcelas.`
+      : `<b>Taxa adm R$ ${fmtN(speN)}</b> por lote, conforme a tabela oficial — sinal não consta nesta linha da tabela.`;
+    const linhaTaxa2 = `<b>Taxa adm R$ ${fmtN(speN)}</b> por lote, conforme a tabela oficial — sinal do Plano 2 não consta na tabela (confirmar com a equipe). Não somada às parcelas.`;
+    const linha13 = row.par.map((v,i)=>`<tr><td>${p13[i]}x</td><td>R$ ${v}</td></tr>`).join('');
+    const linhaAv = row.av.map((v,i)=>`<tr><td>${pav[i]}x</td><td>R$ ${v}</td></tr>`).join('');
+    detb.innerHTML = `
+      <b>${nome} — Quadra ${quadra}, Lote ${lote}</b> · Área ${row.area} m²<br>
+      <span style="font-size:12px;color:#555">Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026), sem cálculo nosso. Estoque não confirmado.</span>
+      <p style="margin:8px 0 2px"><b>Valor à vista: R$ ${row.cash}</b></p>
+      <div style="border:1px solid #cde;border-radius:8px;padding:8px;margin:6px 0">
+        <b>Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)</b><br>
+        Valor na proposta: <b>R$ ${row.prop}</b><br>
+        Sinal (Ato): R$ ${row.ato} + 3x de R$ ${row.com3}${row.ent13 ? ' · Entrada: R$ '+row.ent13 : ''}<br>
+        <div style="margin:6px 0;padding:8px 10px;background:#fef9c3;border:2px solid #eab308;border-radius:8px;font-size:14px">${linhaTaxa1}</div>
+        Parcelas mensais por prazo:
+        <table style="margin-top:4px"><tr><th>Prazo</th><th>Parcela</th></tr>${linha13}</table>
+      </div>
+      <div style="border:1px solid #cde;border-radius:8px;padding:8px;margin:6px 0">
+        <b>Plano 2 — Entrada à vista (1ª parcela em 30 dias)</b><br>
+        Valor na proposta: <b>R$ ${row.avprop}</b><br>
+        Entrada à vista: não confirmada — a coluna impressa ("comissão total") registra R$ ${row.ent}; confirmar com a loteadora se corresponde à entrada do comprador.<br>
+        Parcelas mensais por prazo:
+        <table style="margin-top:4px"><tr><th>Prazo</th><th>Parcela</th></tr>${linhaAv}</table>
+        <div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px">${linhaTaxa2}</div>
+      </div>
+      <span style="font-size:12px;color:#555">Títulos dos planos e cabeçalhos conforme o documento original da loteadora; confirmar condições antes de propor.</span><br>
+      <button id="detpdf" style="margin-top:8px;width:100%;padding:12px;font:700 15px system-ui;background:#0a6b3d;color:#fff;border:0;border-radius:8px">Baixar PDF deste lote (fluxo de pagamento)</button>
+      <button id="detqro" style="margin-top:6px;width:100%;padding:12px;font:700 15px system-ui;background:#1d4ed8;color:#fff;border:0;border-radius:8px">Quero este lote — iniciar proposta</button>
+      <a id="detres" href="#" style="display:block;margin-top:6px;text-align:center;background:#c2410c;color:#fff;padding:12px;border-radius:8px;text-decoration:none;font:700 15px system-ui">Reservar por até 24h (WhatsApp)</a>`;
+    document.getElementById('detgsum').textContent = `${nome} — Q${quadra} · Lote ${lote} · R$ ${row.cash}`;
+    det.style.display='block';
+    if (matchMedia('(max-width:640px)').matches){ det.classList.add('min'); document.getElementById('painel').classList.add('col'); } else det.classList.remove('min');
+    const entryL = (data[fase].quadras[quadra] || {})[lote] || {};
+    detDoc = {nome, quadra, lote, row, p13, pav, logradouro: entryL.logradouro, areaFmt: String(row.area).replace('.',',')};
+    ajustaMapaSheet();
+    document.getElementById('detpdf').onclick = baixaPDF;
+    document.getElementById('detqro').onclick = abreFormProposta;
+    document.getElementById('detres').href = 'https://wa.me/5562981428585?text=' + encodeURIComponent(`Olá! Quero RESERVAR o lote ${lote}, quadra ${quadra} (${nome}), área ${row.area} m² — tabela out/2026 à vista R$ ${row.cash}. Entendo que a reserva vale por até 24h e só vale após confirmação da equipe. Meu nome e telefone:`);
+  }
+  function baixaPDF(){
+    if (!detDoc) return;
+    const {nome, quadra, lote, row, p13, pav} = detDoc;
+    const { jsPDF } = window.jspdf;
+    const d = new jsPDF();
+    let y = 18;
+    d.setFontSize(15); d.text('Reserva do Parque — fluxo de pagamento do lote (tabela outubro/2026)', 14, y); y += 9;
+    d.setFontSize(12); d.text(`${nome} — Quadra ${quadra}, Lote ${lote} — Área ${row.area} m²`, 14, y); y += 8;
+    d.setFontSize(9); d.text('Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026). Estoque e condições não confirmados.', 14, y); y += 10;
+    d.setFontSize(12); d.text(`Valor à vista: R$ ${row.cash}`, 14, y); y += 9;
+    d.setFontSize(11); d.text('Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)', 14, y); y += 6;
+    d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.prop} — Ato: R$ ${row.ato} + 3x de R$ ${row.com3}`, 14, y); y += 6;
+    if (row.ent13) { d.text(`Entrada: R$ ${row.ent13}`, 14, y); y += 6; } else { d.text('Entrada: não informada nesta linha da tabela', 14, y); y += 6; }
+    row.par.forEach((v,i)=>{ d.text(`Prazo ${p13[i]}x — parcela R$ ${v}`, 18, y); y += 5.5; });
+    y += 4;
+    d.setFontSize(11); d.text('Plano 2 — Entrada à vista (1ª parcela em 30 dias)', 14, y); y += 6;
+    d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.avprop}`, 14, y); y += 6;
+    d.text(`Entrada à vista: não confirmada — coluna impressa ("comissão total") registra R$ ${row.ent};`, 14, y); y += 5.5;
+    d.text('confirmar com a loteadora se corresponde à entrada do comprador.', 14, y); y += 6;
+    row.av.forEach((v,i)=>{ d.text(`Prazo ${pav[i]}x — parcela R$ ${v}`, 18, y); y += 5.5; });
+    y += 5;
+    d.setFontSize(9); d.text('Títulos dos planos e cabeçalhos conforme o documento original da loteadora.', 14, y);
+    d.save(`lote-q${quadra}-l${lote}-fluxo-pagamento.pdf`);
+  }
+  // ---- leitura de documentos no aparelho (RapidOCR local; a foto nao sai do dispositivo) ----
+  async function imagemDeArquivo(file){
+    if (window.createImageBitmap) { const b = await createImageBitmap(file); return {img:b, w:b.width, h:b.height}; }
+    const url = URL.createObjectURL(file);
+    const img = await new Promise((ok,no)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=()=>no(new Error('imagem')); i.src=url; });
+    return {img, w:img.naturalWidth, h:img.naturalHeight};
+  }
+  function marca(el, ok){ el.style.borderColor = ok ? '#0a6b3d' : '#b45309'; el.style.borderWidth = '2px'; }
+  async function leDocIdentidade(inp, st){
+    const f = inp.files && inp.files[0]; if (!f) return;
+    if (!window.OcrKit || !window.RapidLocal){ st.innerHTML = '<b style="color:#b00">Leitor n\u00e3o carregou. Confira a internet e tente de novo.</b>'; return; }
+    st.textContent = 'Preparando a leitura no aparelho...';
+    try {
+      const {img,w,h} = await imagemDeArquivo(f);
+      const r = await window.OcrKit.readWithRapid(img, w, h, t=>{ st.textContent = t; });
+      if (!r || !r.fields || !Object.keys(r.fields).length){ st.innerHTML = '<b style="color:#b45309">N\u00e3o consegui ler o documento. Tente uma foto n\u00edtida, sem reflexo, ou preencha \u00e0 m\u00e3o.</b>'; return; }
+      const pre = [];
+      const put = (id, val, lbl)=>{ if (val){ const el=document.getElementById(id); el.value = val; marca(el, true); pre.push(lbl); } };
+      put('f_nome', r.fields.nome, 'nome'); put('f_cpf', r.fields.cpf, 'CPF'); put('f_rg', r.fields.rg, 'RG'); put('f_nasc', r.fields.nascimento, 'nascimento');
+      st.innerHTML = (pre.length ? 'Li e preenchi: <b>'+pre.join(', ')+'</b>. Confira e corrija se preciso - os campos continuam edit\u00e1veis.' : 'Li o documento, mas sem campos aproveit\u00e1veis. Preencha \u00e0 m\u00e3o.') + ' <span style="color:#666">(leitura feita no aparelho; a foto n\u00e3o foi enviada)</span>';
+    } catch(e){ st.innerHTML = '<b style="color:#b00">Falha na leitura ('+(e && e.message ? e.message : 'erro')+'). Tente outra foto ou preencha \u00e0 m\u00e3o.</b>'; }
+  }
+  async function leComprovante(inp, st, candBox){
+    const f = inp.files && inp.files[0]; if (!f) return;
+    if (!window.OcrKit || !window.RapidLocal){ st.innerHTML = '<b style="color:#b00">Leitor n\u00e3o carregou. Confira a internet e tente de novo.</b>'; return; }
+    st.textContent = 'Preparando a leitura no aparelho...'; candBox.innerHTML = '';
+    try {
+      const {img,w,h} = await imagemDeArquivo(f);
+      const r = await window.OcrKit.readWithRapid(img, w, h, t=>{ st.textContent = t; }, false);
+      const text = (r && r.text) || '';
+      if (!text.trim()){ st.innerHTML = '<b style="color:#b45309">N\u00e3o consegui ler o comprovante. Tente uma foto n\u00edtida ou preencha \u00e0 m\u00e3o.</b>'; return; }
+      const parece = window.OcrKit.looksLikeBill(text);
+      const ap = window.OcrKit.extractAddressProof(text);
+      const msgs = [];
+      if (ap.endereco){ const el=document.getElementById('f_end'); el.value = ap.endereco; marca(el, true); msgs.push('endere\u00e7o'); }
+      if (ap.cep){ const el=document.getElementById('f_cep'); el.value = ap.cep; marca(el, true); msgs.push('CEP'); }
+      if (!document.getElementById('f_nome').value && ap.nome){ const el=document.getElementById('f_nome'); el.value = ap.nome; marca(el, false); msgs.push('nome (confira)'); }
+      if (!parece) msgs.push('<b style="color:#b45309">A foto n\u00e3o parece uma conta de consumo - confira se \u00e9 o documento certo.</b>');
+      if (!ap.endereco && ap.candidates && ap.candidates.length){
+        candBox.innerHTML = '<div style="font-size:12px;color:#555;margin-top:4px">N\u00e3o tive certeza do endere\u00e7o. Toque para usar um destes, ou digite \u00e0 m\u00e3o:</div>' +
+          ap.candidates.map(c=>'<button type="button" data-c="'+c.replace(/"/g,'&quot;')+'" style="display:block;width:100%;text-align:left;margin:4px 0;padding:8px;border:1px solid #bbb;border-radius:6px;background:#f8fafc;font-size:13px">'+c+'</button>').join('');
+        candBox.querySelectorAll('button').forEach(b=>{ b.onclick = ()=>{ const el=document.getElementById('f_end'); el.value = b.getAttribute('data-c'); marca(el, false); candBox.innerHTML=''; }; });
+      }
+      st.innerHTML = (msgs.length ? 'Resultado: '+msgs.join(' \u00b7 ') : 'Li o comprovante, mas sem endere\u00e7o confi\u00e1vel. Preencha \u00e0 m\u00e3o.') + ' <span style="color:#666">(leitura feita no aparelho; a foto n\u00e3o foi enviada)</span>';
+    } catch(e){ st.innerHTML = '<b style="color:#b00">Falha na leitura ('+(e && e.message ? e.message : 'erro')+'). Tente outra foto ou preencha \u00e0 m\u00e3o.</b>'; }
+  }
+  // ---- formulário completo da proposta (mesmo fluxo do jacarandas) ----
+  function abreFormProposta(){
+    if (!detDoc) return;
+    const detb = document.getElementById('detb');
+    const {nome, quadra, lote, row, p13, pav} = detDoc;
+    const inp = (id, ph, im)=>'<input id="'+id+'" placeholder="'+ph+'"'+(im?' inputmode="'+im+'"':'')+' style="padding:10px;border:1px solid #bbb;border-radius:6px;width:100%;box-sizing:border-box">';
+    detb.innerHTML = `
+      <b>Proposta — ${nome} · Q${quadra} L${lote}</b>
+      <p style="font-size:12px;color:#555">Opcional: fotografe seus documentos para preencher automático. A leitura acontece <b>só no seu aparelho</b> — a foto não é enviada a ninguém, nem guardada. Todos os campos continuam editáveis.</p>
+      <div style="border:1px solid #cde;border-radius:8px;padding:8px;margin:6px 0">
+        <b style="font-size:13px">1. RG ou CNH</b><br>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0">
+          <button type="button" id="b_doc_cam" style="padding:10px;border:1px solid #14532d;border-radius:6px;background:#14532d;color:#fff;font-size:13px;font-weight:600;cursor:pointer">&#128247; Tirar foto</button>
+          <button type="button" id="b_doc_gal" style="padding:10px;border:1px solid #999;border-radius:6px;background:#fff;font-size:13px;cursor:pointer">&#128444; Escolher da galeria</button>
+        </div>
+        <input id="f_doc_cam" type="file" accept="image/*" capture="environment" style="display:none">
+        <input id="f_doc" type="file" accept="image/*" style="display:none">
+        <div id="ocr1" style="font-size:12.5px;color:#333"></div>
+        <b style="font-size:13px">2. Comprovante de endereço</b><br>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0">
+          <button type="button" id="b_comp_cam" style="padding:10px;border:1px solid #14532d;border-radius:6px;background:#14532d;color:#fff;font-size:13px;font-weight:600;cursor:pointer">&#128247; Tirar foto</button>
+          <button type="button" id="b_comp_gal" style="padding:10px;border:1px solid #999;border-radius:6px;background:#fff;font-size:13px;cursor:pointer">&#128444; Escolher da galeria</button>
+        </div>
+        <input id="f_comp_cam" type="file" accept="image/*" capture="environment" style="display:none">
+        <input id="f_comp" type="file" accept="image/*" style="display:none">
+        <div id="ocr2st" style="font-size:12.5px;color:#333"></div>
+        <div id="ocr2c"></div>
+      </div>
+      <div style="display:grid;gap:6px">
+        ${inp('f_nome','Nome completo')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${inp('f_nasc','Nascimento (dd/mm/aaaa)')}${inp('f_nac','Nacionalidade')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${inp('f_prof','Profissão')}${inp('f_ec','Estado civil')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${inp('f_cpf','CPF','numeric')}${inp('f_rg','RG')}</div>
+        ${inp('f_org','Órgão emissor do RG')}
+        ${inp('f_end','Endereço residencial (rua, nº)')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${inp('f_bairro','Bairro')}${inp('f_cep','CEP','numeric')}</div>
+        ${inp('f_mun','Município/UF')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${inp('f_tel','WhatsApp (DDD + número)','tel')}${inp('f_email','E-mail','email')}</div>
+      </div>
+      <div style="margin:8px 0;font-size:13px">
+        <b>Plano de pagamento:</b>
+        <select id="f_plano" style="padding:8px;border:1px solid #bbb;border-radius:6px;margin:4px 0;width:100%">
+          <option value="1">Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias) — proposta R$ ${row.prop}</option>
+          <option value="2">Plano 2 — Entrada à vista (1ª parcela em 30 dias) — proposta R$ ${row.avprop}</option>
+        </select>
+        <select id="f_prazo" style="padding:8px;border:1px solid #bbb;border-radius:6px;width:100%"></select>
+      </div>
+      <label style="display:flex;gap:8px;margin:10px 0;font-size:13px;align-items:flex-start">
+        <input id="f_lgpd" type="checkbox" style="margin-top:3px">
+        <span>Autorizo o uso dos meus dados apenas para montar e revisar esta proposta (LGPD). Sei que é um RASCUNHO sujeito à revisão do Junio, que os valores vêm da tabela oficial outubro/2026 e que a leitura dos documentos acontece no meu aparelho.</span>
+      </label>
+      <button id="f_gerar" style="width:100%;padding:12px;font:700 15px system-ui;background:#0a6b3d;color:#fff;border:0;border-radius:8px">Gerar proposta rascunho (PDF no modelo Solot)</button>
+      <div id="f_out" style="margin-top:8px"></div>`;
+    detDoc.plano = '1'; detDoc.prazoIdx = 0;
+    const prazoSel = document.getElementById('f_prazo');
+    const fillPrazos = ()=>{
+      const p1 = document.getElementById('f_plano').value === '1';
+      const prazos = p1 ? p13 : pav, vals = p1 ? row.par : row.av;
+      prazoSel.innerHTML = prazos.map((p,i)=>'<option value="'+i+'">Prazo '+p+'x — parcela R$ '+vals[i]+'</option>').join('');
+      detDoc.plano = p1 ? '1' : '2'; detDoc.prazoIdx = 0;
+    };
+    fillPrazos();
+    document.getElementById('f_plano').onchange = fillPrazos;
+    prazoSel.onchange = ()=>{ detDoc.prazoIdx = +prazoSel.value; };
+    document.getElementById('f_doc').onchange = ev=>leDocIdentidade(ev.target, document.getElementById('ocr1'));
+    document.getElementById('f_doc_cam').onchange = ev=>leDocIdentidade(ev.target, document.getElementById('ocr1'));
+    document.getElementById('b_doc_cam').onclick = ()=>document.getElementById('f_doc_cam').click();
+    document.getElementById('b_doc_gal').onclick = ()=>document.getElementById('f_doc').click();
+    document.getElementById('f_comp_cam').onchange = ev=>leComprovante(ev.target, document.getElementById('ocr2st'), document.getElementById('ocr2c'));
+    document.getElementById('b_comp_cam').onclick = ()=>document.getElementById('f_comp_cam').click();
+    document.getElementById('b_comp_gal').onclick = ()=>document.getElementById('f_comp').click();
+    document.getElementById('f_comp').onchange = ev=>leComprovante(ev.target, document.getElementById('ocr2st'), document.getElementById('ocr2c'));
+    document.getElementById('f_gerar').onclick = geraPropostaRascunho;
+    ajustaMapaSheet();
+  }
+  function geraPropostaRascunho(){
+    const {nome, quadra, lote, row, p13, pav, plano, prazoIdx, logradouro, areaFmt} = detDoc;
+    const v = id => document.getElementById(id).value.trim();
+    const out = document.getElementById('f_out');
+    if (!document.getElementById('f_lgpd').checked){ out.innerHTML = '<b style="color:#b00">Marque a autorização LGPD para continuar.</b>'; return; }
+    if (!v('f_nome') || !v('f_cpf') || !v('f_tel')){ out.innerHTML = '<b style="color:#b00">Preencha ao menos nome, CPF e WhatsApp.</b>'; return; }
+    const p1 = {
+      nome: v('f_nome'), nasc: v('f_nasc'), nacionalidade: v('f_nac'), profissao: v('f_prof'), estadoCivil: v('f_ec'),
+      cpf: v('f_cpf'), rg: v('f_rg'), org: v('f_org'),
+      endereco: v('f_end'), bairro: v('f_bairro'), cep: v('f_cep'), municipio: v('f_mun'),
+      tel1: v('f_tel'), email: v('f_email')
+    };
+    const i = prazoIdx || 0;
+    let condicoes, valorTotal, obsPlano;
+    if (plano === '2') {
+      valorTotal = row.avprop;
+      condicoes = [
+        {quantidade:'1', tipo:'Entrada à vista', valor:'A confirmar', inicio:'A confirmar'},
+        {quantidade:pav[i]+'', tipo:'Parcelas mensais', valor:'R$ '+row.av[i], inicio:'1ª em 30 dias', periodicidade:'Mensal'}
+      ];
+      obsPlano = 'Plano 2 — Entrada à vista (1ª parcela em 30 dias). Entrada: a confirmar com a loteadora (a coluna impressa "comissão total" registra R$ '+row.ent+').';
+    } else {
+      valorTotal = row.prop;
+      condicoes = [
+        {quantidade:'1', tipo:'Ato (sinal)', valor:'R$ '+row.ato, inicio:'Na assinatura'},
+        {quantidade:'3', tipo:'Parcelas', valor:'R$ '+row.com3, periodicidade:'Mensal'},
+        {quantidade:p13[i]+'', tipo:'Parcelas mensais', valor:'R$ '+row.par[i], inicio:'1ª em 120 dias', periodicidade:'Mensal'}
+      ];
+      obsPlano = 'Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias). Entrada: '+(row.ent13 ? 'R$ '+row.ent13 : 'não informada nesta linha da tabela — a confirmar')+'.';
+    }
+    const hoje = new Date();
+    const dataDoc = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
+    const d = {
+      p1, vendedor: 'A confirmar',
+      empreendimento: nome + ' — Reserva do Parque',
+      rua: logradouro || undefined,
+      quadra: 'Q'+quadra, lote: 'L'+lote, area: areaFmt,
+      valorTotal, condicoes,
+      obs: 'RASCUNHO sem validade comercial, gerado pelo interessado no mapa digital e SUJEITO À REVISÃO do Junio. Valores da tabela oficial outubro/2026 (vigência 01/10/2026). '+obsPlano+' Demais prazos e condições conforme a tabela. Estoque e disponibilidade a confirmar.',
+      cidade: 'Senador Canedo/GO', dataDoc,
+      corretagem: false
+    };
+    let doc;
+    try {
+      doc = window.OcrKit.buildPropostaSolot(window.jspdf.jsPDF, {logo:null, orange:[238,120,35], dark:[45,45,45]}, d);
+    } catch(e){ out.innerHTML = '<b style="color:#b00">Falha ao montar o PDF ('+(e && e.message ? e.message : 'erro')+').</b>'; return; }
+    const pages = doc.getNumberOfPages();
+    for (let pno=1; pno<=pages; pno++){
+      doc.setPage(pno); doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(190,40,40);
+      doc.text('RASCUNHO — SUJEITO À REVISÃO — SEM VALIDADE COMERCIAL', 105, 4.5, {align:'center'});
+    }
+    const fname = 'proposta-rascunho-q'+quadra+'-l'+lote+'.pdf';
+    doc.save(fname);
+    const resumo = 'Olá! Segue minha PROPOSTA RASCUNHO: '+nome+', quadra '+quadra+', lote '+lote+', área '+row.area+' m². Tabela out/2026: à vista R$ '+row.cash+'; '+(plano==='2' ? 'plano 2 proposta R$ '+row.avprop+' (entrada à vista a confirmar, '+pav[i]+'x de R$ '+row.av[i]+')' : 'plano 1 proposta R$ '+row.prop+' (ato R$ '+row.ato+' + 3x R$ '+row.com3+', '+p13[i]+'x de R$ '+row.par[i]+')')+'. Interessado: '+v('f_nome')+', CPF '+v('f_cpf')+', WhatsApp '+v('f_tel')+(v('f_email') ? ', e-mail '+v('f_email') : '')+'. Anexo o PDF do rascunho. Sei que é rascunho sujeito à revisão do Junio.';
+    out.innerHTML = '<b>PDF rascunho gerado e baixado.</b> Envie para a equipe do Junio:'+
+      '<div style="display:grid;gap:6px;margin-top:6px">'+
+      '<button id="f_share" style="padding:12px;background:#25d366;color:#fff;border:0;border-radius:8px;font:700 15px system-ui">Enviar PDF pelo WhatsApp</button>'+
+      '<a href="https://wa.me/5562981428585?text='+encodeURIComponent(resumo)+'" target="_blank" rel="noopener" style="display:block;padding:12px;background:#128c7e;color:#fff;text-align:center;border-radius:8px;font:700 14px system-ui;text-decoration:none">Ou abrir WhatsApp com o resumo (anexar o PDF baixado)</a></div>'+
+      '<span style="font-size:12px;color:#555">Seus dados vão só nessa conversa. O Junio revisa o rascunho antes de qualquer passo oficial.</span>';
+    document.getElementById('f_share').onclick = async ()=>{
+      try {
+        const blob = doc.output('blob');
+        const file = new File([blob], fname, {type:'application/pdf'});
+        if (navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({files:[file], text:resumo});
+        } else {
+          window.open('https://wa.me/5562981428585?text='+encodeURIComponent(resumo), '_blank', 'noopener');
+          document.getElementById('f_share').textContent = 'Compartilhamento direto indisponível — WhatsApp aberto com o resumo; anexe o PDF baixado';
+        }
+      } catch(e){ /* usuário cancelou ou share indisponível */ }
+    };
+  }
+  // mantém o lote visível na faixa acima da folha (detalhe/proposta)
+  function ajustaMapaSheet(){
+    try {
+      if (!detDoc) return;
+      const pk = pkey(data[faseSel.value].fase);
+      const pp = pk && pins[pk] && pins[pk][detDoc.quadra] ? pins[pk][detDoc.quadra][detDoc.lote] : null;
+      if (!pp) return;
+      const detEl = document.getElementById('det');
+      const detH = detEl.offsetHeight || 0;
+      const visY = map.getSize().y - detH;
+      const pt = map.latLngToContainerPoint(pp);
+      const dy = pt.y - visY/2;
+      if (Math.abs(dy) > 12) map.panBy([0, dy], {animate:true});
+    } catch(e){}
+  }
+  document.getElementById('detc').onclick = ()=>{document.getElementById('det').style.display='none'};
+  faseSel.onchange = fillQuadras;
+  quadraSel.onchange = ()=>{ focoUsuario = true; fillLotes(); };
+  fillQuadras();
+  ajustaZoom();
+});
+// norte da prancha: seta fixa no canto superior direito do mapa
+const Norte = L.Control.extend({onAdd: function(){
+  const d = L.DomUtil.create('div');
+  d.innerHTML = '<div style="background:rgba(255,255,255,.9);border-radius:50%;width:46px;height:46px;text-align:center;font:700 13px/1.1 system-ui;padding-top:4px;box-shadow:0 1px 5px rgba(0,0,0,.3)">▲<br>N</div>';
+  return d;}});
+new Norte({position:'topright'}).addTo(map);
+</script>
+<div id="det" style="display:none;position:fixed;left:0;right:0;bottom:0;max-height:62%;overflow:auto;background:#fff;border-top:3px solid #0a6b3d;padding:10px 14px 12px;z-index:1000;font:14px system-ui;box-shadow:0 -4px 18px rgba(0,0,0,.25)">
+<div id="detgrip" style="display:flex;align-items:center;gap:8px;cursor:pointer;font:700 13.5px system-ui;color:#0a6b3d;padding:0 0 6px;user-select:none">
+  <span id="detgchev" style="font-size:15px">▾</span><span id="detgsum" style="flex:1"></span>
+  <button id="detc" style="border:0;background:#eee;border-radius:6px;padding:4px 10px;font-weight:700">fechar ✕</button>
+</div>
+<div id="detb"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="ocr2.js"></script>
+<script>
+(() => {
+  // pkg/rapid-parser.ts
+  function cpfOk(s) {
+    const d = s.replace(/\D/g, "");
+    if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+    for (const n of [9, 10]) {
+      let t = 0;
+      for (let i = 0; i < n; i++) t += +d[i] * (n + 1 - i);
+      let r = t * 10 % 11 % 10;
+      if (r !== +d[n]) return false;
+    }
+    return true;
+  }
+  var fmtCpf = (s) => {
+    const d = s.replace(/\D/g, "");
+    return d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : s;
+  };
+  var BAD = /INOVA|GEST[ÃA]O|SERVI[ÇC]|ORIGEM|SOURCE|DOCUMENT\b|AFFILIATION|EXPEDI|ISSUE|PLACE|BIRTH|SIGNATURE|DIRETOR|DIRECTOR|CART[ÓO]RIO|CERTID|SOCIAL|VALIDADE|EXPIRY|REPUBLICA|FEDERATIVA|BRASIL|MINIST|DEPARTAMENTO|CARTEIRA|NACIONAL|HABILITA|TRANSITO|TR[ÂA]NSITO|ESTADO|SECRETARIA|INSTITUTO|IDENTIDADE|VALIDA|TERRIT|FILIA|NATURAL|ASSINATURA|ORG[AÃ]O|EMISSOR|DATA|LOCAL|OBSERV|CATEGORIA|REGISTRO|DETRAN|SEGURAN|P[UÚ]BLICA|CPF|CNH|GERAL|DOCUMENTO|PERMISS|ACC|VALID/i;
+  var fixDig = (t) => t.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1").replace(/S/g, "5").replace(/B/g, "8");
+  var UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
+  function parseDoc(text) {
+    const T = text.replace(/[|]/g, "I");
+    const lines = T.split(/\n/).map((s) => s.trim()).filter(Boolean);
+    const out = {}, sug = {};
+    const strict = [...T.matchAll(/(?<![\dOIlSB])\d{3}\.\d{3}\.\d{3}\s?-\s?\d{2}(?![\dOIlSB])/g)].map((m) => m[0].replace(/\D/g, "")).filter(cpfOk);
+    const masks = [...T.matchAll(/(?<![\dOIlSB])[\dOIlSB]{3}[\s.,]?[\dOIlSB]{3}[\s.,]?[\dOIlSB]{3}\s?[-–—.]?\s?[\dOIlSB]{2}(?![\dOIlSB])/g)].map((m) => fixDig(m[0]).replace(/\D/g, "")).filter((d) => d.length === 11);
+    const good = strict[0] || masks.find(cpfOk);
+    if (good) out.cpf = fmtCpf(good);
+    else if (masks[0]) sug.cpf = fmtCpf(masks[0]);
+    const dates = [...T.matchAll(/(\d{2})[\/.\-\s](\d{2})[\/.\-\s](\d{4})/g)].map((m) => ({ s: `${m[1]}/${m[2]}/${m[3]}`, d: +m[1], m: +m[2], y: +m[3], i: m.index })).filter((x) => x.d >= 1 && x.d <= 31 && x.m >= 1 && x.m <= 12 && x.y >= 1920 && x.y <= (/* @__PURE__ */ new Date()).getFullYear() - 16);
+    const nasc = [...T.matchAll(/NASC|BIRTH/gi)].find((mm) => !/CERTID|CASAMENT|REGISTRO\s*CIVIL/i.test(T.slice(Math.max(0, (mm.index || 0) - 30), mm.index))) || null;
+    let nd = null;
+    if (nasc) nd = dates.find((x) => x.i > nasc.index - 5 && x.i < nasc.index + 160);
+    if (!nd && dates.length === 1 && /CARTEIRA\s+DE\s+IDENTIDADE|REGISTRO\s*GERAL/i.test(T)) nd = dates[0];
+    if (nd) out.nasc = nd.s;
+    else if (dates.length && !/CERTID[ÃA]O\s+DE\s+NASC/i.test(T)) sug.nasc = dates.slice().sort((a, b) => a.y - b.y)[0].s;
+    const nt = /NATURALIDADE|PLACE\s+OF\s+BIRTH/i.exec(T);
+    if (nt) {
+      const seg = T.slice(nt.index + 8, nt.index + 200).replace(/NATURALIDADE|PLACE\s+OF\s+BIRTH|\/|OF/gi, " ");
+      const m = /([A-ZÀ-Ú][A-ZÀ-Ú' ]{2,40}?)\s*[-–\/]\s*([A-Z]{2})\b/.exec(seg);
+      if (m && !BAD.test(m[1]) && UFS.includes(m[2])) out.nat = m[1].trim() + " - " + m[2];
+    }
+    if (nd && !out.nat) {
+      const seg = T.slice(nd.i + 10, nd.i + 70);
+      const m = /^[\s,]*([A-ZÀ-Ú][A-ZÀ-Ú' ]{2,30}?)\s*[\/,\-]\s*([A-Z]{2})\b/.exec(seg);
+      if (m && UFS.includes(m[2]) && !BAD.test(m[1])) out.nat = m[1].trim() + " - " + m[2];
+    }
+    for (let i = 0; i < lines.length && !out.nome; i++) {
+      if (/^\W*(?:[\d\s]{0,6}[a-z]?[\d\s]{0,4})NOME\b/i.test(lines[i]) && !/SOCIAL|PAI|M[AÃ]E|FILIA/i.test(lines[i])) {
+        const first = lines[i].replace(/^\W*(?:[\d\s]{0,6}[a-z]?[\d\s]{0,4})NOME(\s+E\s+SOBRENOME)?\W*/i, "");
+        const coded = /^\W*[\d\s]{1,6}[a-z]?[\d\s]{0,4}NOME/i.test(lines[i]);
+        const look = [first, lines[i + 1]];
+        if (coded) look.push(lines[i + 2], lines[i + 3]);
+        for (const cand of look) {
+          if (cand && /FILIA|AFFILIAT|PAI\b|M[AÃ]E\b/i.test(cand)) break;
+          if (!cand) continue;
+          const c = cand.replace(/[^A-ZÀ-Ú\s]/gi, " ").replace(/\s+/g, " ").trim();
+          if (c.split(" ").length >= 2 && c.length >= 8 && c.length <= 60 && !BAD.test(c) && !/\d/.test(cand)) {
+            out.nome = c.toUpperCase();
+            break;
+          }
+        }
+      }
+    }
+    if (!out.nome) {
+      const c = lines.map((l) => l.replace(/[^A-ZÀ-Ú\s]/g, " ").replace(/\s+/g, " ").trim()).filter((l) => /^[A-ZÀ-Ú]/.test(l) && l.split(" ").length >= 2 && l.split(" ").every((w) => w.length >= 2) && l.length >= 10 && l.length <= 48 && !BAD.test(l) && l === l.toUpperCase());
+      if (c.length) sug.nome = c.sort((a, b) => b.length - a.length)[0];
+    }
+    const ro = /([\dXx][\d.\-]{3,13}[\dXx])\s*[\/\-]?\s*(SSP|SESP|SJS|PC|DGPC|IFP|DETRAN|SDS|SEJUSP|PM|CBM)\W{0,3}([A-Z]{2})\b/i.exec(T);
+    if (ro) {
+      out.rg = ro[1].replace(/[^\dXx]/g, "");
+      out.org = ro[2].toUpperCase() + " " + ro[3].toUpperCase();
+    } else {
+      const rg = /(?:REGISTRO\s*GERAL|\bRG\b|IDENTIDADE)\D{0,20}([\dXx][\d.\-\s]{4,12}[\dXx])/i.exec(T);
+      if (rg) sug.rg = rg[1].replace(/\s+/g, "").trim();
+    }
+    if (out.cpf && !out.rg && /REGISTRO\s*GERAL/i.test(T) && /CPF/i.test(T) && !/HABILITA|CNH|PERMISS/i.test(T)) {
+      const sd = (sug.rg || "").replace(/\D/g, ""), cd = out.cpf.replace(/\D/g, "");
+      if (sd && sd !== cd) {
+        out.rg = sug.rg;
+        delete sug.rg;
+      } else {
+        out.rg = out.cpf;
+        out.cin = 1;
+        delete sug.rg;
+      }
+    }
+    const cep = /\b(\d{5})-?(\d{3})\b/.exec(T);
+    if (cep && !(out.cpf || "").includes(cep[0])) out.cep = cep[1] + "-" + cep[2];
+    return { out, sug };
+  }
+  function mrzCd(s) {
+    const w = [7, 3, 1];
+    let t = 0;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      const v = /\d/.test(c) ? +c : c === "<" ? 0 : c.charCodeAt(0) - 55;
+      t += v * w[i % 3];
+    }
+    return t % 10;
+  }
+  function parseMRZ(text) {
+    const L = text.toUpperCase().split(/\n/).map((x) => x.replace(/\s+/g, "").replace(/[«{(\[]/g, "<").trim()).filter((x) => x.length >= 20 && /[<]{2}|BRA/.test(x));
+    for (const l of L) {
+      const m = /(\d{6})(\d)([MFX<])(\d{6})(\d)([A-Z<]{3})/.exec(l.replace(/O(?=\d)|(?<=\d)O/g, "0"));
+      if (!m) continue;
+      const okN = mrzCd(m[1]) === +m[2], okV = mrzCd(m[4]) === +m[5];
+      if (!okN || !okV) continue;
+      const yy = +m[1].slice(0, 2), cy = (/* @__PURE__ */ new Date()).getFullYear() % 100;
+      const by = (2e3 + yy > (/* @__PURE__ */ new Date()).getFullYear() - 10 ? 1900 : 2e3) + yy;
+      const nome = (L.find((x) => /^[A-Z]+(<<?[A-Z]+)+<*$/.test(x) && x !== l && !/BRA/.test(x.slice(0, 5))) || "").replace(/<+/g, " ").trim();
+      return { nasc: `${m[1].slice(4, 6)}/${m[1].slice(2, 4)}/${by}`, val: `${m[4].slice(4, 6)}/${m[4].slice(2, 4)}/${2e3 + +m[4].slice(0, 2)}`, sexo: m[3], nome };
+    }
+    return null;
+  }
+  function mergeParse(list) {
+    const out = {}, sug = {};
+    for (const r of list) {
+      for (const k in r.out) if (!out[k] || k === "nome" && r.out[k].length > out[k].length) out[k] = r.out[k];
+    }
+    for (const r of list) for (const k in r.sug) if (!out[k] && !sug[k]) sug[k] = r.sug[k];
+    const nasc = list.map((r) => r.out.nasc).filter(Boolean);
+    if (new Set(nasc).size > 1) {
+      const c = {};
+      nasc.forEach((x) => c[x] = (c[x] || 0) + 1);
+      const top = Object.entries(c).sort((a, b) => b[1] - a[1]);
+      if (top[0][1] === top[1][1]) {
+        delete out.nasc;
+        sug.nasc = top[0][0];
+      } else out.nasc = top[0][0];
+    }
+    return { out, sug };
+  }
+
+  // pkg/rapid-reader.ts
+  var loading = null;
+  function loadScript() {
+    if (window.RapidLocal) return Promise.resolve();
+    if (loading) return loading;
+    loading = new Promise((ok, no) => {
+      const s = document.createElement("script");
+      s.src = "ocr2.js";
+      s.onload = () => ok();
+      s.onerror = () => {
+        loading = null;
+        no(new Error("ocr2"));
+      };
+      document.head.appendChild(s);
+    });
+    return loading;
+  }
+  async function readWithRapid(input, w, h, onProgress, rotate = true) {
+    await loadScript();
+    const R = window.RapidLocal;
+    if (!R) return null;
+    const readRot = async (rot) => {
+      const sc = Math.min(1, 2200 / Math.max(w, h));
+      const cw = Math.round(w * sc), ch = Math.round(h * sc);
+      const c = document.createElement("canvas");
+      const sw = rot % 180 === 0;
+      c.width = sw ? cw : ch;
+      c.height = sw ? ch : cw;
+      const g = c.getContext("2d");
+      g.translate(c.width / 2, c.height / 2);
+      g.rotate(rot * Math.PI / 180);
+      g.drawImage(input, -cw / 2, -ch / 2, cw, ch);
+      const r = await R.read(c, { onLoad: (p, got, tot) => {
+        const mb = (n) => (n / 1048576).toFixed(1).replace(".", ",");
+        onProgress?.(tot ? `Baixando o leitor no aparelho: ${mb(got || 0)} de ${mb(tot)} MB.` : got ? `Baixando o leitor no aparelho: ${mb(got)} MB...` : `Baixando o leitor no aparelho: ${Math.round(p * 100)}%.`);
+      }, onStage: (st, i, n) => {
+        if (st === "det") onProgress?.(rot ? `Lendo no aparelho: girando o documento (${rot}\xB0)...` : "Lendo no aparelho: procurando o texto...");
+        else onProgress?.(`Lendo no aparelho: trecho ${i} de ${n}...`);
+      } });
+      c.width = c.height = 0;
+      const text = r.text || "";
+      if (!text.trim()) return { text: "", fields: {} };
+      const m = mergeParse([parseDoc(text)]);
+      const mrz = parseMRZ(text);
+      const o = m.out;
+      const sg = m.sug || {};
+      const f = {};
+      if (o.nome) f.nome = o.nome;
+      if (o.cpf) f.cpf = o.cpf;
+      if (o.rg) f.rg = o.org ? `${o.rg} ${o.org}` : o.rg;
+      if (!o.rg && sg.rg) f.rg = sg.rg;
+      const nasc = mrz?.nasc && (!o.nasc || o.nasc === mrz.nasc) ? mrz.nasc : o.nasc;
+      if (nasc) f.nascimento = nasc;
+      return { text, fields: f };
+    };
+    let best = null;
+    for (const rot of rotate ? [0, 90, 270, 180] : [0]) {
+      const r = await readRot(rot);
+      const f = r.fields;
+      const n = Object.keys(f).length;
+      if (!best || n > Object.keys(best.fields).length) best = r;
+      if (f.cpf || f.nome && f.nascimento) return r;
+    }
+    return best;
+  }
+
+  // pkg/address-proof.ts
+  var fold = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  var STREET = /^(?:(?:RUA|AVENIDA|ALAMEDA|TRAVESSA|ESTRADA|RODOVIA|PRACA|QUADRA|VIA|AV|AL|TV|ROD|QD|R)\.?\s+(?!SETOR\b|LOTE\b|ROTA\b)[A-Z0-9]|(?:BR|GO)[- ]?\d+)/;
+  var COMPANY = /CNPJ|C\.?N\.?P\.?J|INSCRICAO ESTADUAL|INSC\.? EST|LTDA|\bS\.?\/?A\b|DISTRIBUIDORA|CONCESSIONARIA|COMPANHIA|ENERGISA|EQUATORIAL|ENEL|SANEAGO|CELG|VIVO|CLARO|OI\b|TIM\b|NET\b|SAC\b|OUVIDORIA|ATENDIMENTO|WWW\.|HTTP|@/;
+  var CLIENT_LABEL = /END\.?\s*(?:ENT|INST|CLI|COB)\.?|(?:ENDERECO|LOGRADOURO)(?:\s+(?:DO\s+)?(?:CLIENTE|CONSUMIDOR|TITULAR|DE\s+ENTREGA|DA\s+UNIDADE|INSTALACAO|RESIDENCIAL|DE\s+COBRANCA))?|UNIDADE CONSUMIDORA|LOCAL DE INSTALACAO|DADOS DO CLIENTE|DADOS DO CONSUMIDOR|DADOS DO COMPROMISSARIO/;
+  var CEP = /(?<!\d)(\d{5})[-.\s]?(\d{3})(?!\d)/;
+  var cap = (t) => t.toLowerCase().replace(/(^|[\s.-])([a-zà-ú])/g, (_, a, b) => a + b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E)\b/g, (x) => x.toLowerCase()).replace(/\bIi\b/, "II").replace(/\bIii\b/, "III").replace(/\bRes\b/, "Res.").replace(/\bSao\b/g, "S\xE3o").replace(/\bConceicao\b/g, "Concei\xE7\xE3o");
+  var joinParts = (a) => [a.rua ? cap(a.rua) + (a.numero && !/^[O0]$|^S\/?N$/i.test(a.numero) ? `, n\xBA ${a.numero}` : a.quadra || a.lote ? "" : ", n\xBA (confira)") : "Rua (confira)", a.quadra && `Qd ${a.quadra}`, a.lote && `Lt ${a.lote}`, a.bairro && cap(a.bairro), a.cidade && a.uf ? `${cap(a.cidade)}/${a.uf}` : a.cidade && cap(a.cidade)].filter(Boolean).join(", ");
+  function structuredBill(text) {
+    const flat = fold(text.replace(/\r/g, "").replace(/_/g, " ")).replace(/[|]/g, " ").replace(/\s+/g, " ");
+    const BAI = "((?:RES|RESIDENCIAL|JARDIM|JD|SETOR|ST|VILA|PARQUE|BAIRRO|LOT)\\b[A-Z0-9' .-]{2,40}?)";
+    const TAIL = "\\s+(\\d{5})[-.\\s]?(\\d{3})\\b(?:\\s+([A-Z][A-Z ']{2,30}?)\\s+([A-Z]{2})\\b)?";
+    const blocks = [];
+    let m;
+    const r1 = new RegExp("END\\.?\\s*ENT\\.?\\s*[:.\xBB>]*\\s*([A-Z][A-Z' ]{3,50}?)(?:\\s+(\\d{1,5}|S/?N|O))?\\s+(?:[A-Z]{1,3}\\s+)?" + BAI + TAIL, "g");
+    while (m = r1.exec(flat)) {
+      let ru = m[1].trim(), nu = m[2];
+      const ct = /\s+(O|\d{1,5}|S\/?N)(?:\s.*)?$/.exec(ru);
+      if (ct) {
+        ru = ru.slice(0, ct.index).trim();
+        if (!nu) nu = ct[1];
+      }
+      blocks.push({ rua: ru, numero: nu === "O" ? "0" : nu, bairro: m[3].trim(), cep: m[4] + "-" + m[5], cidade: m[6]?.trim(), uf: m[7] });
+    }
+    if (!blocks.length) {
+      const r2 = new RegExp(BAI + TAIL, "g");
+      while (m = r2.exec(flat)) {
+        blocks.push({ bairro: m[1].trim(), cep: m[2] + "-" + m[3], cidade: m[4]?.trim(), uf: m[5] });
+      }
+    }
+    if (!blocks.length) return null;
+    const cityVotes = [];
+    {
+      const rc = /(\d{5})[-.\s]?(\d{3})\b\s+([A-Z][A-Z ']{2,30}?)\s+([A-Z]{2})\b/g;
+      const bestCep = blocks.map((b) => b.cep).filter(Boolean)[0];
+      while (m = rc.exec(flat)) {
+        if (m[1] + "-" + m[2] === bestCep) cityVotes.push(m[3].trim() + "|" + m[4]);
+      }
+    }
+    if (cityVotes.length) {
+      for (const bk of blocks) {
+        delete bk.cidade;
+        delete bk.uf;
+      }
+    }
+    let q = null;
+    {
+      const rl = text.replace(/\r/g, "").split("\n").map((x) => fold(x).trim());
+      for (let i = 0; i < rl.length - 1; i++) {
+        if (/\bLOTE\b.*\bQUADRA\b/.test(rl[i]) && /SETOR|ROTA|SEQU/.test(rl[i])) {
+          const v = /^\W*(\d{1,4})\s+(\d{1,4})\b/.exec(rl[i + 1]);
+          if (v) {
+            q = v;
+            break;
+          }
+        }
+      }
+      if (!q) {
+        const fx = (x) => x.replace(/^[IL|]/, "1");
+        for (let i = 2; i < rl.length - 2 && !q; i++) {
+          if (/^\d{5}$/.test(rl[i]) && /^\d{5}$/.test(rl[i + 1]) && /^\d{4}$/.test(rl[i + 2])) {
+            const a = fx(rl[i - 2]), b2 = fx(rl[i - 1]);
+            if (/^\d{1,3}$/.test(a) && /^\d{1,3}$/.test(b2) && /LOTE|QUADRA|SETOR|ROTA/.test(rl.slice(Math.max(0, i - 12), i).join(" "))) {
+              q = ["", a, b2];
+            }
+          }
+        }
+      }
+      if (!q) {
+        for (let i = 0; i < rl.length - 2 && !q; i++) {
+          if (/^LOTE$/.test(rl[i]) && /^QUADRA\b/.test(rl[i + 1] + " " + (rl[i + 2] || ""))) {
+            let bc = -1;
+            for (let j = i + 2; j < Math.min(rl.length - 1, i + 14); j++) {
+              if (/\d{6,}/.test(rl[j]) && bc < 0) bc = j;
+            }
+            if (bc > 0 && bc - i <= 8 && /^\d{1,3}$/.test(rl[bc + 1]) && /^\d{1,3}$/.test(rl[bc + 2])) {
+              q = ["", rl[bc + 1], rl[bc + 2]];
+            }
+            if (false) for (let j = i + 2; j < Math.min(rl.length - 1, i + 20); j++) {
+              if (/^\d{1,3}$/.test(rl[j]) && /^\d{1,3}$/.test(rl[j + 1])) {
+                q = ["", rl[j], rl[j + 1]];
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    const vals = (k) => blocks.map((b) => b[k]).filter(Boolean);
+    const top = (a) => {
+      const c = /* @__PURE__ */ new Map();
+      a.forEach((x) => c.set(x, (c.get(x) || 0) + 1));
+      const e = [...c.entries()].sort((x, y) => y[1] - x[1]);
+      if (e.length > 1 && e[0][1] === e[1][1]) return "";
+      return e[0]?.[0] || "";
+    };
+    let consistent = new Set(vals("cep")).size <= 1;
+    const lev = (a, b) => {
+      const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+      for (let j = 1; j <= b.length; j++) d[0][j] = j;
+      for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      return d[a.length][b.length];
+    };
+    const ruas = vals("rua");
+    let ruaOk = "";
+    {
+      const sc = ruas.map((r) => ({ r, n: ruas.filter((x) => lev(fold(x), fold(r)) <= 2).length, e: ruas.filter((x) => x === r).length }));
+      sc.sort((a, b) => b.n - a.n || b.e - a.e);
+      if (sc[0] && sc[0].n >= 2 && !(sc[1] && sc[1].n === sc[0].n && sc[1].e === sc[0].e && lev(fold(sc[1].r), fold(sc[0].r)) > 2)) ruaOk = sc[0].e >= 2 || sc.filter((x) => x.n === sc[0].n).every((x) => lev(fold(x.r), fold(sc[0].r)) <= 2 && x.e === 1) === false ? sc[0].r : "";
+    }
+    if (!ruaOk && ruas.length === 1) ruaOk = ruas[0] + " (confira)";
+    const cv = top(cityVotes);
+    const out = { cep: top(vals("cep")), bairro: top(vals("bairro")), rua: ruaOk, numero: top(vals("numero")), cidade: cv ? cv.split("|")[0] : top(vals("cidade")), uf: cv ? cv.split("|")[1] : top(vals("uf")) };
+    if (!out.cep) return null;
+    if (!out.rua) out.numero = "";
+    return { parts: { ...out, quadra: q?.[2], lote: q?.[1] }, consistent };
+  }
+  var NAME_BAD = /RUA|AVENIDA|ALAMEDA|TRAVESSA|RESIDENCIAL|CONJUNTO|\bRES\b|\bVILA\b|\bJARDIM\b|ENDERECO|LOGRADOURO|CEP|LOTE|QUADRA|SETOR|BAIRRO|CIDADE|ESTADO|MUNICIPIO|FATURA|CONTA|VENCIMENTO|REFERENCIA|CADASTRO|COD|CODIGO|TOTAL|MES|ANO|DIA|LEITURA|CONSUMO|HISTORICO|INFORMACOES|MENSAGENS|ANALISE|AGUA|ESGOTO|SERVICO|NOTA|FISCAL|SEQUENCIA|ROTA|PARCELA|VALOR|PAGAR|BANCO|EMISSAO|DADOS|COMPROMISSARIO|CLIENTE|TITULAR|CONSUMIDOR|UNIDADE|MEDIDOR|HIDROMETRO|TARIFA|IMPOSTO|TRIBUT/;
+  var NAME_LABEL = /^(?:NOME|TITULAR|CLIENTE|CONTRIBUINTE|SACADO|ASSINANTE|LOCATARIO|PROPRIETARIO)\s*[:.\-]?\s*(.+)$/;
+  function extractBillName(text) {
+    const raw = text.replace(/\r/g, "").split("\n").map((x) => x.trim()).filter(Boolean);
+    const count = /* @__PURE__ */ new Map();
+    const order = [];
+    const push = (cand, fromLabel) => {
+      if (!fromLabel && /\d/.test(cand)) return;
+      const f = fold(cand).replace(/[^A-Z ']/g, " ").replace(/\s+/g, " ").trim();
+      if (f.length < 8 || f.length > 60) return;
+      const ws = f.split(" ");
+      if (ws.length < 2 || ws.length > 6) return;
+      if (ws.some((w) => w.length < 2 && w !== "E" && !/^[DE][AEOS]?$/.test(w))) return;
+      if (NAME_BAD.test(f) || COMPANY.test(f)) return;
+      if (!count.has(f)) order.push(f);
+      count.set(f, (count.get(f) || 0) + 1);
+    };
+    for (const line of raw) {
+      const f = fold(line).replace(/\s+/g, " ").trim();
+      const m = NAME_LABEL.exec(f);
+      if (m) {
+        push(m[1], true);
+        continue;
+      }
+      push(line);
+    }
+    const ranked = [...count.entries()].sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]));
+    const top = ranked[0];
+    if (top && top[1] >= 2 && !(ranked[1] && ranked[1][1] === top[1])) return { nome: cap(top[0]), candidates: ranked.slice(0, 3).map((r) => cap(r[0])) };
+    return { candidates: ranked.slice(0, 3).map((r) => cap(r[0])) };
+  }
+  function extractAddressProof(text) {
+    const sb = structuredBill(text);
+    const nm0 = extractBillName(text);
+    if (sb && sb.consistent) {
+      const e = joinParts(sb.parts);
+      return { endereco: e, cep: sb.parts.cep, candidates: [e], nome: nm0.nome, nomeCandidates: nm0.candidates };
+    }
+    const raw = text.replace(/\r/g, "").split("\n").map((s) => s.trim()).filter(Boolean);
+    const lines = raw.map((l) => /\d{9,}|(?:\d{8,}\D{1,3}){2,}|\d{11}-\s?\d/.test(l) ? "" : fold(l));
+    const company = new Array(lines.length).fill(false);
+    lines.forEach((l, i) => {
+      if (COMPANY.test(l) && !CLIENT_LABEL.test(l)) {
+        for (let j = Math.max(0, i - 1); j <= Math.min(lines.length - 1, i + 3); j++) company[j] = true;
+      }
+    });
+    const cands = [];
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      const lab = CLIENT_LABEL.exec(l);
+      let start = i, txt = raw[i];
+      let strong2 = false;
+      if (lab) {
+        const rest = raw[i].slice(lab.index + lab[0].length).replace(/^[\s:\-/]+/, "");
+        if (rest && (STREET.test(fold(rest)) || rest.length > 12 && !COMPANY.test(fold(rest)) && (/\b[A-Z]{2}\s*$/.test(fold(rest)) || CEP.test(rest)))) {
+          txt = rest;
+          strong2 = true;
+        } else {
+          start = i + 1;
+          txt = raw[start] || "";
+          if (!STREET.test(fold(txt))) continue;
+          strong2 = true;
+        }
+      } else if (!STREET.test(l) || company[i]) continue;
+      if (company[start] && !strong2) continue;
+      if (strong2 && company[start] && COMPANY.test(fold(txt))) continue;
+      const parts = [txt];
+      let cep;
+      for (let j = start + 1; j <= Math.min(start + 3, lines.length - 1); j++) {
+        const lj = lines[j];
+        if (COMPANY.test(lj) && !CEP.test(lj)) break;
+        if (STREET.test(lj) && j > start) break;
+        if (/^(BAIRRO|SETOR|CIDADE|MUNICIPIO|COMPLEMENTO|CEP|APTO|APARTAMENTO|BLOCO|LOTE|QUADRA|CASA)\b/.test(lj) || CEP.test(lj) || /\b[A-Z]{2}\s*$/.test(lj) && lj.length < 45) {
+          parts.push(raw[j]);
+        } else break;
+      }
+      const joined = parts.join(", ");
+      const m = CEP.exec(joined);
+      if (m) cep = m[1] + "-" + m[2];
+      cands.push({ text: joined.replace(/\s*,\s*,/g, ",").replace(/CEP[:\s]*/gi, "CEP ").trim(), cep, i: start, strong: strong2 });
+    }
+    for (let i = 0; i < lines.length; i++) {
+      if (company[i]) continue;
+      const m = /(\d{5})[-.\s]?(\d{3})\s+([A-Z][A-Z .,_'-]{2,40}?)[\s,_]+([A-Z]{2})\s*$/.exec(lines[i]);
+      if (!m) continue;
+      const prev = i > 0 && !company[i - 1] && /END\.?\s*(?:ENT|INST|CLI)|ENDERECO/.test(lines[i - 1]) ? raw[i - 1].replace(/^.*?(?:END\.?\s*ENT\.?|ENDERECO[^:]*)[:»>\s]*/i, "") + ", " : "";
+      cands.push({ text: (prev + raw[i]).replace(/_/g, " ").replace(/\s+/g, " ").trim(), cep: m[1] + "-" + m[2], i, strong: !!prev });
+    }
+    const looseCeps = /* @__PURE__ */ new Set();
+    lines.forEach((l, i) => {
+      if (company[i]) return;
+      const m = CEP.exec(l);
+      if (m && /CEP/.test(l)) looseCeps.add(m[1] + "-" + m[2]);
+    });
+    const byKey = /* @__PURE__ */ new Map();
+    for (const c of cands) {
+      const k = c.cep || c.text;
+      const o = byKey.get(k);
+      if (!o || c.text.length > o.text.length) byKey.set(k, { ...c, strong: c.strong || !!o?.strong });
+    }
+    const uniq = [...byKey.values()];
+    const strong = uniq.filter((c) => c.strong);
+    const pool = strong.length ? strong : uniq;
+    const out = { candidates: uniq.map((c) => c.text), nome: nm0.nome, nomeCandidates: nm0.candidates };
+    if (pool.length === 1) {
+      out.endereco = pool[0].text.replace(/,?\s*CEP\s*\d{5}-?\d{3}/i, "").replace(/[\s,]+$/, "");
+      const cp = pool[0].cep || (looseCeps.size === 1 ? [...looseCeps][0] : void 0);
+      if (cp) out.cep = cp;
+    }
+    return out;
+  }
+  var looksLikeBill = (text) => {
+    const t = fold(text);
+    const hits = (t.match(/FATURA|CONTA\s*DE\s*(?:AGUA|LUZ|ENERGIA)|VENCIMENTO|CONSUMO|HIDROMETRO|LEITURA|KWH|UNIDADE\s*CONSUMIDORA|REFERENCIA|SANEAGO|SANESC|ENERGISA|EQUATORIAL|ENEL|MEDIDOR|CODIGO\s*DE\s*BARRAS|PAGAR\s*EXCLUSIVAMENTE|DADOS\s*DO\s*CLIENTE|ENDERECO\s*DE\s*ENTREGA/g) || []).length;
+    const id = /REGISTRO GERAL|CARTEIRA DE IDENTIDADE|HABILITACAO|FILIACAO|NATURALIDADE|DATA DE NASCIMENTO/.test(t);
+    return hits >= 3 && !id;
+  };
+
+  // pkg/proposta-solot.ts
+  var FIN = ["Investimento", "Moradia", "Com\xE9rcio", "Outros"];
+  var VEI = ["Jornal", "TV", "Outdoor", "Internet", "Plant\xE3o de Vendas", "Faixa", "Panfleto", "Indica\xE7\xE3o", "Corretor"];
+  function buildPropostaSolot(JsPDF, brand, d) {
+    const doc = new JsPDF({ unit: "mm", format: "a4" });
+    const L = 10, R = 200, W = 190, O = brand.orange;
+    const T = (t, x2, y2, o = {}) => {
+      doc.setFont("helvetica", o.b ? "bold" : "normal");
+      doc.setFontSize(o.s || 8);
+      doc.setTextColor(...o.c || [30, 30, 30]);
+      doc.text(String(t || ""), x2, y2, o.al ? { align: o.al } : void 0);
+    };
+    const box = (x2, y2, w, h, c2 = O) => {
+      doc.setDrawColor(...c2);
+      doc.setLineWidth(0.25);
+      doc.rect(x2, y2, w, h);
+    };
+    const cell = (l, v, x2, y2, w, h = 6) => {
+      box(x2, y2, w, h);
+      T(l, x2 + 1, y2 + 2.3, { s: 5.5, c: [90, 90, 90] });
+      T(v, x2 + 1.5, y2 + 5.2, { s: 8.5 });
+    };
+    const band = (t, y2) => {
+      doc.setFillColor(...O);
+      doc.rect(L, y2, W, 5.5, "F");
+      T(t, 105, y2 + 3.9, { b: 1, s: 8, c: [255, 255, 255], al: "center" });
+    };
+    const logo = () => {
+      if (brand.logo2) doc.addImage(brand.logo2, "PNG", 36, 13, 38, 10.2);
+      if (brand.logo) {
+        doc.addImage(brand.logo, "PNG", L, 7, 23, 20.3);
+      } else {
+        doc.setDrawColor(190, 190, 190);
+        doc.setLineDashPattern([1, 1], 0);
+        doc.rect(L, 8, 42, 18);
+        doc.setLineDashPattern([], 0);
+        T("[logo Solot]", L + 21, 18, { s: 7, al: "center", c: [150, 150, 150] });
+      }
+    };
+    const title = (t, s, num) => {
+      logo();
+      doc.setFillColor(...O);
+      doc.rect(80, 10, 120, 14, "F");
+      T(t, 140, 19.5, { b: 1, s, c: [255, 255, 255], al: "center" });
+      if (num !== void 0) T(num ? `N\xBA ${num}` : "", 196, 8, { b: 1, s: 8, c: [190, 40, 40], al: "right" });
+    };
+    const pessoa = (p2, t, y2) => {
+      let yy = y2;
+      const row = (c2) => {
+        let x2 = L;
+        for (const [l, v, w] of c2) {
+          cell(l, v, x2, yy, w);
+          x2 += w;
+        }
+        yy += 6;
+      };
+      row([[t, p2.nome, W - 35], ["Data nasc.", p2.nasc, 35]]);
+      row([["Nacionalidade", p2.nacionalidade, 60], ["Profiss\xE3o", p2.profissao, W - 60 - 35], ["Estado civil", p2.estadoCivil, 35]]);
+      row([["CPF", p2.cpf, 45], ["RG", p2.rg, 45], ["Org. exp.", p2.org, 50], ["Reg. cas.", p2.regCas, 50]]);
+      row([["End. residencial", p2.endereco, W - 60], ["Bairro", p2.bairro, 60]]);
+      row([["CEP", p2.cep, 40], ["Munic\xEDpio/UF", p2.municipio, W - 40 - 45], ["Telefone 1", p2.tel1, 45]]);
+      row([["E-mail", p2.email, W - 45], ["Telefone 2", p2.tel2, 45]]);
+      row([["Empresa", p2.empresa, W - 90 - 45], ["Cargo", p2.cargo, 90], ["Renda", p2.renda, 45]]);
+      return yy;
+    };
+    title("PROPOSTA DE COMPRA DE IM\xD3VEL", 16, d.numero);
+    let y = 30;
+    y = pessoa(d.p1, "1\xBA Proponente", y) + 1.5;
+    y = pessoa(d.p2 || {}, "2\xBA Proponente ou C\xF4njuge", y);
+    let x = L;
+    for (const [l, v, w] of [["Ref. pessoal 1", d.ref1, W / 2 - 25], ["Fone", d.fone1, 25], ["Ref. pessoal 2", d.ref2, W / 2 - 25], ["Fone", d.fone2, 25]]) {
+      cell(l, v, x, y, w);
+      x += w;
+    }
+    y += 10;
+    T("A(s) pessoa(s) acima qualificada(s), daqui por diante passa(m) a ser denominada(s) PROPONENTE e autoriza(m) a promover com exclusividade a compra do", L, y, { s: 7.5 });
+    T("im\xF3vel a seguir caracterizado e de acordo com as condi\xE7\xF5es descritas.", L, y + 3.5, { s: 7.5 });
+    y += 5.5;
+    cell("Vendedor", d.vendedor, L, y, 110);
+    cell("Empreendimento", d.empreendimento, L + 110, y, 80);
+    y += 6;
+    x = L;
+    for (const [l, v, w] of [["Rua", d.rua, W - 110], ["Qd", d.quadra, 25], ["Lote", d.lote, 25], ["\xC1rea (m\xB2)", d.area, 60]]) {
+      cell(l, v, x, y, w);
+      x += w;
+    }
+    y += 6;
+    cell("Valor Total: R$", d.valorTotal, L + W - 70, y, 70);
+    T("CONDI\xC7\xD5ES DO NEG\xD3CIO", L + (W - 70) / 2, y + 4, { b: 1, s: 8, al: "center" });
+    box(L, y, W - 70, 6);
+    y += 6;
+    const cols = [["Quant.", 25], ["Tipo", 40], ["Valor (R$)", 40], ["Data de In\xEDcio Pgto", 35], ["Periodicidade", 30], ["Reajuste", 20]];
+    x = L;
+    cols.forEach(([n, w]) => {
+      box(L + (x - L), y, w, 5);
+      T(n, x + 1, y + 3.5, { s: 6, c: [90, 90, 90] });
+      x += w;
+    });
+    y += 5;
+    const keys = ["quantidade", "tipo", "valor", "inicio", "periodicidade", "reajuste"];
+    for (let i = 0; i < 6; i++) {
+      const c2 = d.condicoes?.[i] || {};
+      x = L;
+      cols.forEach(([n, w], j) => {
+        box(x, y, w, 5.5);
+        T(c2[keys[j]], x + 1.5, y + 4, { s: 8 });
+        x += w;
+      });
+      y += 5.5;
+    }
+    y += 0.5;
+    box(L, y, W, 5.5);
+    T("Taxa de juro anual de financiamento:", L + 1, y + 3.8, { s: 7, b: 1 });
+    T(d.taxaJuros, L + 55, y + 3.8, { s: 8 });
+    T("Sistema de amortiza\xE7\xE3o", L + 120, y + 3.8, { s: 7 });
+    doc.rect(L + 148, y + 1.2, 3, 3);
+    if (d.sistema === "price") T("X", L + 148.5, y + 4, { b: 1, s: 8 });
+    T("PRICE", L + 152, y + 3.8, { s: 7 });
+    doc.rect(L + 168, y + 1.2, 3, 3);
+    if (d.sistema === "sac") T("X", L + 168.5, y + 4, { b: 1, s: 8 });
+    T("SAC", L + 172, y + 3.8, { s: 7 });
+    y += 5.5;
+    const chk = (l, items, sel, y2) => {
+      box(L, y2, W, 5.5);
+      T(l, L + 1, y2 + 3.8, { s: 6.5, b: 1 });
+      let xx = L + (l.length > 20 ? 36 : 28);
+      items.forEach((it) => {
+        const t = `(${sel?.includes(it) ? "X" : " "}) ${it}`;
+        T(t, xx, y2 + 3.8, { s: 6.5 });
+        xx += doc.getTextWidth(t) + 3.2;
+      });
+    };
+    chk("Finalidade da Compra:", FIN, d.finalidade, y);
+    y += 5.5;
+    chk("Ve\xEDculo/Comunica\xE7\xE3o:", VEI, d.veiculo, y);
+    y += 5.5;
+    box(L, y, W, 7);
+    T("Observa\xE7\xF5es:", L + 1, y + 3.8, { s: 6.5, b: 1 });
+    T(d.obs, L + 22, y + 3.8, { s: 8 });
+    y += 9;
+    y += 1.5;
+    T("Condi\xE7\xF5es:", L, y, { b: 1, s: 8.5 });
+    y += 3.5;
+    const cl = ["1 - O proponente autoriza o corretor a juntar a documenta\xE7\xE3o necess\xE1ria \xE0 consecu\xE7\xE3o do presente mandato.", "2 - Esta proposta, ap\xF3s aceita pelo(a) vendedor(a) ser\xE1 de car\xE1ter irretrat\xE1vel e irrevog\xE1vel, ficando o proponente obrigado a comparecer no escrit\xF3rio do(a) vendedor(a), situado no endere\xE7o descrito no informativo em anexo no prazo de at\xE9 30 (trinta) dias, para assinar o Contrato de Compromisso de Compra e Venda e receber o carn\xEA/boleto para pagamento nos respectivos vencimentos. O n\xE3o comparecimento no prazo estipulado acarretar\xE1 o cancelamento desta Proposta.", "3 - O proponente tem ci\xEAncia que somente poder\xE1 iniciar constru\xE7\xE3o ou qualquer benfeitoria no im\xF3vel acima descrito, ap\xF3s a assinatura do Contrato de Compromisso de Compra e Venda e atendidas \xE0s cl\xE1usulas e condi\xE7\xF5es nele previstas.", "CL\xC1USULA COMPROMISS\xD3RIA: Todo lit\xEDgio ou controv\xE9rsia origin\xE1rio ou decorrente deste instrumento ser\xE1 definitivamente decidido por arbitragem. A arbitragem ser\xE1 administrada pela SEGUNDA C\xC2MARA DE CONCILIA\xC7\xC3O E ARBITRAGEM DE GOI\xC2NIA-GO. (2\xAA CCA-GO), situada na Av. Fued Jos\xE9 Sebba, n\xBA 1193, Jardim Goi\xE1s, Goi\xE2nia-GO, eleita pelas partes e indicada nesta cl\xE1usula, cujo Estatuto e Regimento Interno, registrado no Cart\xF3rio de T\xEDtulos e Documentos, as partes adotam e declaram conhecer, concordar e integrar este instrumento. Qualquer das partes que desejar instaurar o procedimento arbitral, manifestar\xE1 sua inten\xE7\xE3o \xE0 2\xAA CCA-GO, indicando a mat\xE9ria que ser\xE1 objeto da arbitragem, o seu valor, o nome e qualifica\xE7\xE3o completa da parte contr\xE1ria, e anexando c\xF3pia do contrato. A controv\xE9rsia ser\xE1 dirimida por \xE1rbitro preferencialmente \xFAnico, dentre a lista dos nomeados pela 2\xAA CCA-GO. A arbitragem processar-se-\xE1 na sede da 2\xAA CCA-GO e o \xE1rbitro decidir\xE1 com base nas regras de direito. As partes autorizam que as notifica\xE7\xF5es arbitrais sejam feitas atrav\xE9s do endere\xE7o de e-mail ou do aplicativo de mensagens WhatsApp."];
+    for (const c2 of cl) {
+      const ls = doc.splitTextToSize(c2, W);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.6);
+      doc.setTextColor(30, 30, 30);
+      doc.text(ls, L, y);
+      y += ls.length * 2.7 + 0.8;
+    }
+    y += 4;
+    T(`${d.cidade || "Goi\xE2nia"}, ${d.dataDoc || "______ de ____________________ de 20____"}.`, 105, y, { s: 8, al: "center" });
+    y += 11;
+    const sig = (t, x2, w, yy) => {
+      doc.setDrawColor(40, 40, 40);
+      doc.line(x2, yy, x2 + w, yy);
+      T(t, x2 + w / 2, yy + 3.5, { s: 7, al: "center" });
+    };
+    sig("PROPRIET\xC1RIA", L + 5, 80, y);
+    sig("1\xBA PROPONENTE", L + 105, 80, y);
+    y += 10;
+    sig(`Corretor / CRECI${d.corretor?.nome ? ": " + d.corretor.nome + " / " + (d.corretor.creci || "") : ""}`, L + 5, 80, y);
+    sig("2\xBA PROPONENTE / C\xD4NJUGE", L + 105, 80, y);
+    if (d.corretagem === false) return doc;
+    doc.addPage();
+    title("INSTRUMENTO DE CORRETAGEM", 13);
+    T("INSTRUMENTO PARTICULAR DE PRESTA\xC7\xC3O DE SERVI\xC7OS DE CORRETAGEM NA COMPRA E VENDA", 105, 33, { b: 1, s: 9, al: "center" });
+    T("DE UNIDADE IMOBILI\xC1RIA COM RECIBO DE HONOR\xC1RIOS", 105, 37.5, { b: 1, s: 9, al: "center" });
+    y = 41;
+    band("CONTRATANTE(S)", y);
+    y += 5.5;
+    const r3 = (a, yy, hh = 6) => {
+      let xx = L;
+      for (const [l, v, w] of a) {
+        box(xx, yy, w, hh);
+        T(l, xx + 1.5, yy + 4.1, { s: 6.5, b: 1 });
+        T(v, xx + 1.5 + doc.getTextWidth(l) * 0.9 + 3, yy + 4.1, { s: 8 });
+        xx += w;
+      }
+    };
+    r3([["NOME:", d.p1.nome, 125], ["CPF:", d.p1.cpf, 35], ["RG:", d.p1.rg, 30]], y);
+    y += 6;
+    r3([["NOME:", d.p2?.nome, 125], ["CPF:", d.p2?.cpf, 35], ["RG:", d.p2?.rg, 30]], y);
+    y += 8;
+    band("CONTRATADO / CORRETOR", y);
+    y += 5.5;
+    r3([["NOME:", d.corretor?.nome, 125], ["CPF:", d.corretor?.cpf, 35], ["CRECI:", d.corretor?.creci, 30]], y);
+    y += 8;
+    band("IM\xD3VEL OBJETO DA INTERMEDIA\xC7\xC3O", y);
+    y += 5.5;
+    r3([["Qd.", d.quadra, 25], ["Lt.", d.lote, 25], ["\xC1rea", d.area ? d.area + " m\xB2" : "", 40], ["Loteamento", d.empreendimento, 65], ["Proposta", d.numero, 35]], y);
+    y += 11;
+    const p = (t) => {
+      const ls = doc.splitTextToSize(t, W);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(30, 30, 30);
+      doc.text(ls, L, y);
+      y += ls.length * 3.3 + 1.5;
+    };
+    p("1. O(s) CONTRATANTE(S), por interm\xE9dio do CONTRATADO, prometeu(ram) adquirir o IM\xD3VEL acima descrito, conforme PROPOSTA DE COMPRA DE IM\xD3VEL assinada no mesmo ato deste instrumento.");
+    p("2. O(s) CONTRATANTE(S), em fun\xE7\xE3o da INTERMEDIA\xC7\xC3O havida para a aquisi\xE7\xE3o do IM\xD3VEL objeto do presente instrumento, pagaram neste ato ao CONTRATADO, a t\xEDtulo de comiss\xE3o parcial da comiss\xE3o de corretagem, os valores da seguinte forma:");
+    y += 1;
+    const c = d.comissao || {};
+    box(L, y, W, 5);
+    T("Valor (R$)", L + 30, y + 3.5, { s: 6.5, c: [90, 90, 90], al: "center" });
+    T("Valor (extenso)", L + 105, y + 3.5, { s: 6.5, c: [90, 90, 90], al: "center" });
+    T("Vencimento", L + 175, y + 3.5, { s: 6.5, c: [90, 90, 90], al: "center" });
+    y += 5;
+    box(L, y, 60, 7);
+    box(L + 60, y, 100, 7);
+    box(L + 160, y, 30, 7);
+    T(c.valor, L + 2, y + 5, { s: 9 });
+    T(c.extenso, L + 62, y + 5, { s: 9 });
+    T(c.vencimento, L + 162, y + 5, { s: 9 });
+    y += 10;
+    band("FORMA", y);
+    y += 5.5;
+    const fm = (a, sel, xx, w) => {
+      box(xx, y, w, 6);
+      doc.rect(xx + w - 5, y + 1.5, 3, 3);
+      if (sel) T("X", xx + w - 4.5, y + 4.2, { b: 1, s: 8 });
+      T(a, xx + 2, y + 4.1, { s: 7, b: 1 });
+    };
+    fm("Dinheiro", c.forma === "dinheiro", L, 30);
+    fm("PIX", c.forma === "pix", L + 30, 25);
+    box(L + 55, y, W - 55, 6);
+    T("Chave", L + 57, y + 4.1, { s: 7, c: [90, 90, 90] });
+    T(c.chave, L + 72, y + 4.1, { s: 8 });
+    y += 6;
+    fm("TED", c.forma === "ted", L, 30);
+    fm("Cheque", c.forma === "cheque", L + 30, 25);
+    box(L + 55, y, 25, 6);
+    T("N\xBA", L + 57, y + 4.1, { s: 7, c: [90, 90, 90] });
+    T(c.num, L + 63, y + 4.1, { s: 8 });
+    box(L + 80, y, 40, 6);
+    T("N\xBA Banco", L + 82, y + 4.1, { s: 7, c: [90, 90, 90] });
+    T(c.banco, L + 98, y + 4.1, { s: 8 });
+    box(L + 120, y, 35, 6);
+    T("Ag\xEAncia", L + 122, y + 4.1, { s: 7, c: [90, 90, 90] });
+    T(c.ag, L + 135, y + 4.1, { s: 8 });
+    box(L + 155, y, 35, 6);
+    T("N\xBA Conta", L + 157, y + 4.1, { s: 7, c: [90, 90, 90] });
+    T(c.conta, L + 170, y + 4.1, { s: 8 });
+    y += 10;
+    p("3. O CONTRATADO declara haver recebido o valor supra declarado, dando neste ato quita\xE7\xE3o, servindo o presente documento como recibo de honor\xE1rios parcial da comiss\xE3o de corretagem.");
+    p("4. O(s) CONTRATANTE(S) reconhecem expressamente que por se tratar de servi\xE7os j\xE1 prestados pelo CONTRATADO na forma e condi\xE7\xF5es deste instrumento n\xE3o s\xE3o pass\xEDveis de qualquer impugna\xE7\xE3o ou sujeitos \xE0 devolu\xE7\xE3o, ainda que o CONTRATO DE COMPROMISSO DE COMPRA E VENDA seja rescindido ou n\xE3o se efetive, nos termos do artigo 725 do C\xF3digo Civil Brasileiro.");
+    p("5. Fica eleita a 2\xAA C\xC2MARA DE CONCILIA\xC7\xC3O E ARBITRAGEM DE GOI\xC2NIA como foro para dirimir eventuais controv\xE9rsias oriundas na presente aven\xE7a.");
+    y += 3;
+    p("Assim, justas e contratadas, as partes firmam o presente instrumento em 2 vias de igual teor e forma.");
+    y += 12;
+    T("____________________/GO, ______ de ____________________ de 202___.", L, y, { s: 8 });
+    y += 22;
+    sig("CONTRATANTE(S)", L + 30, 70, y);
+    sig("CONTRATADO", L + 115, 70, y);
+    return doc;
+  }
+
+  // ocrkit-entry.js
+  window.OcrKit = { readWithRapid, extractAddressProof, looksLikeBill, buildPropostaSolot };
+})();
+
+</script>
+</body>
+</html>
