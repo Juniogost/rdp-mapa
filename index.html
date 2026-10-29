@@ -49,8 +49,11 @@
     #painel{width:calc(100% - 16px);max-height:44%;top:auto;bottom:64px;right:8px}
     #nota{font-size:10px}
     #hud{font-size:12px;padding:5px 8px;gap:6px}
-    #hud strong{font-size:13px}
-    #hud select{flex:1;min-width:0;font-size:13px!important;padding:5px!important}
+    #hud strong{display:none}
+    #hud #lnk3d{font-size:0!important;padding:2px 6px!important}
+    #hud #lnk3d::after{content:'3D →';font-size:11px}
+    #hud select{flex:1 1 30%;min-width:0;font-size:13px!important;padding:5px!important}
+    #hud #fase{flex:1.5 1 60%}
   }
   #det.min{max-height:56px!important;overflow:hidden!important}
   #det.min #detb{display:none}
@@ -122,7 +125,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
   document.getElementById('detgrip').onclick = (e)=>{ if (e.target.id!=='detc') document.getElementById('det').classList.toggle('min'); };
   nota.onclick = ()=>nota.classList.toggle('col');
   const ptit = document.getElementById('ptit'), lotes = document.getElementById('lotes');
-  for (const k of Object.keys(data)) faseSel.add(new Option(data[k].fase, k));
+  for (const k of Object.keys(data)) faseSel.add(new Option(data[k].fase.split('— ')[1] || data[k].fase, k));
   { const kj = Object.keys(data).find(k => (data[k].fase||'').toLowerCase().includes('jacarand')); if (kj) faseSel.value = kj; }
   function fillQuadras(){
     trocaTiles(pkey(data[faseSel.value].fase));
@@ -308,6 +311,8 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     const {nome, quadra, lote, row, p13, pav} = detDoc;
     const { jsPDF } = window.jspdf;
     const d = new jsPDF();
+    const spePdfV = (function(s){ if (s==null||s==='') return 150; const v = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return isNaN(v)?150:v; })(row.spe);
+    const spePdfT = spePdfV.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
     let y = 18;
     d.setFontSize(15); d.text('Reserva do Parque — fluxo de pagamento do lote (tabela outubro/2026)', 14, y); y += 9;
     d.setFontSize(12); d.text(`${nome} — Quadra ${quadra}, Lote ${lote} — Área ${row.area} m²`, 14, y); y += 8;
@@ -316,6 +321,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     d.setFontSize(11); d.text('Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)', 14, y); y += 6;
     d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.prop} — Ato: R$ ${row.ato} + 3x de R$ ${row.com3}`, 14, y); y += 6;
     if (row.ent13) { d.text(`Entrada: R$ ${row.ent13}`, 14, y); y += 6; } else { d.text('Entrada: não informada nesta linha da tabela', 14, y); y += 6; }
+    d.text(`Sinal (Ato) + taxa administrativa de R$ ${spePdfT} por lote (tabela oficial) — não somada às parcelas.`, 14, y); y += 6;
     row.par.forEach((v,i)=>{ d.text(`Prazo ${p13[i]}x — parcela R$ ${v}`, 18, y); y += 5.5; });
     y += 4;
     d.setFontSize(11); d.text('Plano 2 — Entrada à vista (1ª parcela em 30 dias)', 14, y); y += 6;
@@ -548,7 +554,7 @@ const Norte = L.Control.extend({onAdd: function(){
   return d;}});
 new Norte({position:'topright'}).addTo(map);
 </script>
-<div id="det" style="display:none;position:fixed;left:0;right:0;bottom:0;max-height:62%;overflow:auto;background:#fff;border-top:3px solid #0a6b3d;padding:10px 14px 12px;z-index:1000;font:14px system-ui;box-shadow:0 -4px 18px rgba(0,0,0,.25)">
+<div id="det" style="display:none;position:fixed;left:0;right:0;bottom:0;max-height:50%;overflow:auto;background:#fff;border-top:3px solid #0a6b3d;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));z-index:1000;font:14px system-ui;box-shadow:0 -4px 18px rgba(0,0,0,.25)">
 <div id="detgrip" style="display:flex;align-items:center;gap:8px;cursor:pointer;font:700 13.5px system-ui;color:#0a6b3d;padding:0 0 6px;user-select:none">
   <span id="detgchev" style="font-size:15px">▾</span><span id="detgsum" style="flex:1"></span>
   <button id="detc" style="border:0;background:#eee;border-radius:6px;padding:4px 10px;font-weight:700">fechar ✕</button>
