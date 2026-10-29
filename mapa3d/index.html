@@ -17,7 +17,7 @@
   #sol .row{display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap}
   #sol button{font-size:12px;padding:3px 8px;border:1px solid #14532d;background:#f0fdf4;border-radius:6px;cursor:pointer}
   #sol .val{font-weight:700;color:#92400e}
-  #nota{position:absolute;bottom:8px;left:8px;right:8px;z-index:1000;background:rgba(17,24,39,.88);color:#e5e7eb;font-size:11px;line-height:1.45;padding:8px 10px;border-radius:8px;cursor:pointer;user-select:none}
+  #nota{position:absolute;bottom:8px;left:8px;right:8px;z-index:1000;background:rgba(17,24,39,.88);color:#e5e7eb;font-size:11px;line-height:1.45;padding:8px 172px 8px 10px;border-radius:8px;cursor:pointer;user-select:none}
   #nota.col{max-height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   #nota.col::after{content:' ▴';float:right;color:#fbbf24}
   #nota:not(.col)::after{content:' ▾';float:right;color:#fbbf24}
@@ -344,5 +344,6 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
 });
 
 </script>
+<script src="../atendimento.js?v=2" defer></script>
 </body>
 </html>
