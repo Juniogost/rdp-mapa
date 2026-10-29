@@ -1,0 +1,76 @@
+{
+ "_aviso": "Valores de referência dos stories do Matheus Ferreira (23-26/10), por empreendimento, unidade SEM VAGA. Não são por unidade. Conferir tabela vigente. Disponibilidade por unidade: sem espelho datado — tudo \"a confirmar\".",
+ "empreendimentos": [
+  {
+   "id": "ita",
+   "nome": "Itá Nobre",
+   "blocos": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6"
+   ],
+   "ref": {
+    "condicao": "Unidade sem vaga",
+    "renda": "R$ 2.550,00",
+    "fator": "Cotista",
+    "score": "D",
+    "sinal": "1x de R$ 990,00",
+    "mensais": "20x de R$ 765,00",
+    "intermediarias": "2x de R$ 1.990,00",
+    "parcelas": "84x de R$ 255,00",
+    "metragem": "32 a 35 m² (faixa informada pela Tenda)"
+   },
+   "blocos_info": {
+    "B1": {
+     "andares": 5
+    },
+    "B2": {
+     "andares": 5
+    },
+    "B3": {
+     "andares": 5
+    },
+    "B4": {
+     "andares": 5
+    },
+    "B5": {
+     "andares": 5
+    },
+    "B6": {
+     "andares": 4
+    }
+   },
+   "unidades_por_andar": [
+    "01",
+    "02",
+    "03",
+    "04"
+   ],
+   "disponibilidade": {}
+  },
+  {
+   "id": "luar",
+   "nome": "Novos Ares Luar",
+   "blocos": null,
+   "ref": {
+    "condicao": "Unidade sem vaga",
+    "renda": "R$ 2.550,00",
+    "fator": "Sim",
+    "score": "D",
+    "sinal": "1x de R$ 990,00",
+    "mensais": "26x de R$ 765,00",
+    "intermediarias": "3x de R$ 1.840,00",
+    "parcelas": "84x de R$ 255,00"
+   }
+  },
+  {
+   "id": "bv",
+   "nome": "La Buena Vista",
+   "blocos": null,
+   "ref": null
+  }
+ ]
+}
