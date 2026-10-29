@@ -304,7 +304,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     ajustaMapaSheet();
     document.getElementById('detpdf').onclick = baixaPDF;
     document.getElementById('detqro').onclick = abreFormProposta;
-    document.getElementById('detres').href = 'https://wa.me/5562981428585?text=' + encodeURIComponent(`Olá! Quero RESERVAR o lote ${lote}, quadra ${quadra} (${nome}), área ${row.area} m² — tabela out/2026 à vista R$ ${row.cash}. Entendo que a reserva vale por até 24h e só vale após confirmação da equipe. Meu nome e telefone:`);
+    document.getElementById('detres').href = 'https://wa.me/5562982165619?text=' + encodeURIComponent(`Olá! Quero RESERVAR o lote ${lote}, quadra ${quadra} (${nome}), área ${row.area} m² — tabela out/2026 à vista R$ ${row.cash}. Entendo que a reserva vale por até 24h e só vale após confirmação da equipe. Meu nome e telefone:`);
   }
   function baixaPDF(){
     if (!detDoc) return;
@@ -511,7 +511,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     out.innerHTML = '<b>PDF rascunho gerado e baixado.</b> Envie para a equipe do Junio:'+
       '<div style="display:grid;gap:6px;margin-top:6px">'+
       '<button id="f_share" style="padding:12px;background:#25d366;color:#fff;border:0;border-radius:8px;font:700 15px system-ui">Enviar PDF pelo WhatsApp</button>'+
-      '<a href="https://wa.me/5562981428585?text='+encodeURIComponent(resumo)+'" target="_blank" rel="noopener" style="display:block;padding:12px;background:#128c7e;color:#fff;text-align:center;border-radius:8px;font:700 14px system-ui;text-decoration:none">Ou abrir WhatsApp com o resumo (anexar o PDF baixado)</a></div>'+
+      '<a href="https://wa.me/5562982165619?text='+encodeURIComponent(resumo)+'" target="_blank" rel="noopener" style="display:block;padding:12px;background:#128c7e;color:#fff;text-align:center;border-radius:8px;font:700 14px system-ui;text-decoration:none">Ou abrir WhatsApp com o resumo (anexar o PDF baixado)</a></div>'+
       '<span style="font-size:12px;color:#555">Seus dados vão só nessa conversa. O Junio revisa o rascunho antes de qualquer passo oficial.</span>';
     document.getElementById('f_share').onclick = async ()=>{
       try {
@@ -520,7 +520,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
         if (navigator.canShare && navigator.canShare({files:[file]})){
           await navigator.share({files:[file], text:resumo});
         } else {
-          window.open('https://wa.me/5562981428585?text='+encodeURIComponent(resumo), '_blank', 'noopener');
+          window.open('https://wa.me/5562982165619?text='+encodeURIComponent(resumo), '_blank', 'noopener');
           document.getElementById('f_share').textContent = 'Compartilhamento direto indisponível — WhatsApp aberto com o resumo; anexe o PDF baixado';
         }
       } catch(e){ /* usuário cancelou ou share indisponível */ }
