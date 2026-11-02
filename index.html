@@ -46,7 +46,7 @@
   #nota b{color:#fbbf24}
   .norte{position:absolute;z-index:900;pointer-events:none}
   @media (max-width:640px){
-    #painel{width:calc(100% - 16px);max-height:44%;top:auto;bottom:64px;right:8px}
+    #painel{width:calc(100% - 16px);max-height:44%;top:auto;bottom:106px;right:8px}
     #nota{font-size:10px}
     #hud{font-size:12px;padding:5px 8px;gap:6px}
     #hud strong{display:none}
@@ -75,17 +75,19 @@
   <div id="lotes"></div>
 </div>
 <div id="nota">
-  <b>Aviso:</b> versão ilustrada da prancha oficial de implantação (nada acrescentado). Situação dos lotes (bolinhas): conforme o mapa da incorporadora em 27/10/2026 — reservas valem por até 24h. Valores: tabelas oficiais outubro/2026 (vigência 01/10/2026). <b>Confirme disponibilidade e condições pelo WhatsApp</b>
+  <div id="dispdata"></div>
+  <b>Aviso:</b> versão ilustrada da prancha oficial de implantação (nada acrescentado). Situação dos lotes (bolinhas): conforme o mapa da incorporadora em 27/10/2026 — reservas valem por até 24h. Valores: tabelas oficiais novembro/2026 (vigência 01/11/2026). <b>Confirme disponibilidade e condições pelo WhatsApp</b>
   <a style="color:#86efac" href="https://wa.me/5562981428585">62 98142-8585</a>. Quadras ainda não liberadas aparecem sem bolinha; lote "Em breve" fica sem preço enquanto isso.
   Norte conforme a prancha; análise de insolação por lote é estimativa visual, pendente de georreferenciamento.
   Uso do solo e do subsolo: pendentes de fonte oficial.
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="status.js"></script>
 <script>
 const TILESETS = {
   jacarandas: {url:'mapa/tiles/{z}/{x}_{y}.png?v=6', W:11134, H:7875, F:32, zn:6, draw:[[-215.6,32.8],[-32.8,228.1]]},
-  aroeiras: {url:'mapa/tiles-aroeiras/{z}/{x}_{y}.png?v=6', W:18725, H:13245, F:64, zn:6, draw:[[-149.1,65.0],[-59.8,225.4]]},
-  angicos: {url:'mapa/tiles-angicos/{z}/{x}_{y}.png?v=5', W:13245, H:9362, F:64, zn:6, draw:[[-114.1,37.1],[-41.0,163.9]]}
+  aroeiras: {url:'mapa/tiles-aroeiras/{z}/{x}_{y}.png?v=7', W:18725, H:13245, F:64, zn:6, draw:[[-149.1,65.0],[-59.8,225.4]]},
+  angicos: {url:'mapa/tiles-angicos/{z}/{x}_{y}.png?v=6', W:13245, H:9362, F:64, zn:6, draw:[[-114.1,37.1],[-41.0,163.9]]}
 };
 let DRAW = TILESETS.jacarandas.draw;
 let tileLayer = null;
@@ -111,10 +113,12 @@ const homeCtl = L.control({position:'topleft'});
 homeCtl.onAdd = ()=>{ const b = L.DomUtil.create('button',''); b.innerHTML = '&#9974;'; b.title = 'Ver o mapa inteiro'; b.style.cssText = 'width:34px;height:64px;font-size:17px;background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;display:block;margin-top:4px'; b.onclick = (e)=>{e.preventDefault(); focouQ=false; fitTudo(true);}; return b; };
 homeCtl.addTo(map);
 function ajustaZoom(){const t=(document.getElementById('hud').offsetHeight+6)+'px';document.querySelectorAll('.leaflet-top .leaflet-control').forEach(z=>z.style.marginTop=t);}
-window.addEventListener('load',ajustaZoom);window.addEventListener('resize',ajustaZoom);setTimeout(ajustaZoom,300);setTimeout(ajustaZoom,1500);
+window.addEventListener('load',ajustaZoom);window.addEventListener('resize',ajustaZoom);window.addEventListener('resize',updDetH);setTimeout(ajustaZoom,300);setTimeout(ajustaZoom,1500);
 new ResizeObserver(ajustaZoom).observe(document.getElementById('hud'));
 // indicador de norte (norte da prancha = topo da imagem)
-Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.json?v=6').then(r=>r.json()), fetch('mapa/pins.json?v=8').then(r=>r.json()).catch(()=>({}))]).then(([data, plano, pins])=>{
+Promise.all([fetch('mapa/lotes.json?v=8').then(r=>r.json()), fetch('mapa/plano.json?v=7').then(r=>r.json()), fetch('mapa/pins.json?v=10').then(r=>r.json()).catch(()=>({}))]).then(async ([data, plano, pins])=>{
+  const rdpSt = await RDPStatus.aplicar('status.json', data);
+  { const dd = document.getElementById('dispdata'); if (dd) dd.textContent = RDPStatus.linha(rdpSt); }
   const faseSel = document.getElementById('fase'), quadraSel = document.getElementById('quadra');
   const painel = document.getElementById('painel'), nota = document.getElementById('nota');
   const leg = document.getElementById('leg');
@@ -122,7 +126,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
   window.addEventListener('load',ajustaLeg);window.addEventListener('resize',ajustaLeg);setTimeout(ajustaLeg,300);setTimeout(ajustaLeg,1500);
   if (matchMedia('(max-width:640px)').matches){ painel.classList.add('col'); nota.classList.add('col'); }
   document.getElementById('ptit').onclick = ()=>painel.classList.toggle('col');
-  document.getElementById('detgrip').onclick = (e)=>{ if (e.target.id!=='detc') document.getElementById('det').classList.toggle('min'); };
+  document.getElementById('detgrip').onclick = (e)=>{ if (e.target.id!=='detc'){ document.getElementById('det').classList.toggle('min'); setTimeout(updDetH,60); } };
   nota.onclick = ()=>nota.classList.toggle('col');
   const ptit = document.getElementById('ptit'), lotes = document.getElementById('lotes');
   for (const k of Object.keys(data)) faseSel.add(new Option(data[k].fase.split('— ')[1] || data[k].fase, k));
@@ -144,26 +148,24 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
   const dotsLayer = L.layerGroup().addTo(map); // bolinhas (zoom baixo)
   let quadraHL = null;
   function pinInfo(l){
-    const vend = l.disp==='vendido' || l.status==='vendido';
-    const resv = l.disp==='reservado' || l.status==='reservado';
-    const livrTab = l.status==='tabela_out2026' && !vend && !resv;
-    const livr = l.disp==='livre' || (livrTab && !l.disp);
-    if (vend) return {cor:'#dc2626', clica:false, tipo:'v'};
-    if (resv) return {cor:'#ea580c', clica:false, tipo:'r'};
-    if (livr) return {cor:'#16a34a', clica:livrTab, tipo:'l'};
+    const a = RDPStatus.avail(l);
+    if (a === 'vendido') return {cor:'#dc2626', clica:false, tipo:'v'};
+    if (a === 'reservado') return {cor:'#ea580c', clica:false, tipo:'r'};
+    if (a === 'livre') return {cor:'#16a34a', clica:RDPStatus.temTabela(l), tipo:'l'};
+    if (a === 'consultar') return {cor:'#ca8a04', clica:false, tipo:'c'};
     return null;
   }
   function buildPins(){
     pinsLayer.clearLayers(); dotsLayer.clearLayers();
     const d = data[faseSel.value], pk = pkey(d.fase);
     const pq = pk && pins[pk] ? pins[pk] : {};
-    let nL=0,nR=0,nV=0;
+    let nL=0,nR=0,nV=0,nC=0;
     for (const q of Object.keys(d.quadras)){
       const qp = pq[q]; if (!qp) continue;
       const lotesQ = d.quadras[q] || {};
       for (const id of Object.keys(qp)){
         const pi = pinInfo(lotesQ[id] || {}); if (!pi) continue;
-        if (pi.tipo==='l') nL++; else if (pi.tipo==='r') nR++; else nV++;
+        if (pi.tipo==='l') nL++; else if (pi.tipo==='r') nR++; else if (pi.tipo==='c') nC++; else nV++;
         const pos = qp[id];
         const dot = L.circleMarker(pos, {radius:5, color:'#fff', weight:1.2, fillColor:pi.cor, fillOpacity:0.95});
         if (pi.clica) dot.on('click', ()=>mostraFluxo(faseSel.value, q, id));
@@ -174,7 +176,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
         m.addTo(pinsLayer);
       }
     }
-    leg.innerHTML = `<span class="chip livre">Disponível ${nL}</span><span class="chip reservado">Reservado ${nR}</span><span class="chip vendido">Vendido ${nV}</span>`;
+    leg.innerHTML = `<span class="chip livre">Disponível ${nL}</span><span class="chip reservado">Reservado ${nR}</span><span class="chip vendido">Vendido ${nV}</span>` + (nC?`<span class="chip consultar">Consultar ${nC}</span>`:'');
     aplicaZoomPins();
   }
   function aplicaZoomPins(){
@@ -215,34 +217,32 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     const brl = v => v ? 'R$ ' + Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0}) : '';
     let livres = 0;
     const pkq = pkey(d.fase), temTab = pkq && plano[pkq] && Object.keys(plano[pkq].rows||{}).some(k=>k.startsWith(q+'-'));
+    const semPins = pkq && !(pins[pkq] && pins[pkq][q]);
     let html = '';
     if (!temTab) html += `<div style="padding:8px 10px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;margin-bottom:6px;font-size:13px">Quadra ainda sem tabela oficial liberada — valores e disponibilidade só pela equipe.<br><a href="https://wa.me/5562981428585?text=${encodeURIComponent('Olá! Quero consultar a quadra '+q+' ('+d.fase+').')}" style="display:block;margin-top:6px;text-align:center;background:#0a6b3d;color:#fff;padding:10px;border-radius:8px;text-decoration:none;font-weight:700">Consultar pelo WhatsApp</a></div>`;
+    if (semPins) html += `<div style="padding:8px 10px;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;margin-bottom:6px;font-size:13px">📍 Pins desta quadra em revisão — a lista de lotes está correta; só a posição exata no mapa está sendo recalibrada com a prancha oficial.</div>`;
     html += '<table><tr><th>Lote</th><th>Área (m²)</th><th>Logradouro</th><th>Situação</th></tr>';
     for (const id of ids){
       const l = lotesQ[id];
+      const av = RDPStatus.avail(l), temTab = RDPStatus.temTabela(l);
       let st;
-      if (l.disp === 'livre' && l.status !== 'tabela_out2026'){
-        st = '<span class="chip livre">Livre</span><span class="val">valor sob consulta</span>';
-      } else if (l.status === 'tabela_out2026'){
+      if (av === 'vendido') st = '<span class="chip vendido">Vendido</span>';
+      else if (av === 'reservado') st = '<span class="chip reservado">Reservado</span>';
+      else if (av === 'consultar') st = '<span class="chip consultar">Consultar</span>';
+      else if (av === 'livre' && temTab){
         livres++;
         const vals = [l.valor_avista && brl(l.valor_avista)+' à vista', l.valor_proposta && brl(l.valor_proposta)+' proposta'].filter(Boolean).join('<br>');
         st = `<span class="chip livre">Livre</span><span class="val">${vals}</span>`;
-      } else {
-        st = '<span class="chip embreve">Em breve</span>';
-      }
-      const vend = l.disp === 'vendido' || l.status === 'vendido', resv = l.disp === 'reservado' || l.status === 'reservado';
-      const diverg = l.status === 'consultar';
-      const clic = (!vend && !resv && l.status === 'tabela_out2026') ? ` data-lote="${id}" style="cursor:pointer"` : '';
-      if (vend) st = '<span class="chip vendido">Vendido</span>';
-      else if (resv) st = '<span class="chip reservado">Reservado</span>';
-      else if (diverg) st = '<span class="chip consultar">Consultar</span>';
+      } else if (av === 'livre') st = '<span class="chip livre">Livre</span><span class="val">valor sob consulta</span>';
+      else st = '<span class="chip embreve">Em breve</span>';
+      const clic = (av === 'livre' && temTab) ? ` data-lote="${id}" style="cursor:pointer"` : '';
       html += `<tr${clic}><td>${id}</td><td>${l.area_m2==null?'\u2014':l.area_m2.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>${l.logradouro}</td><td>${st}</td></tr>`;
     }
     lotes.innerHTML = html + '</table>';
     lotes.querySelectorAll('tr[data-lote]').forEach(tr => tr.onclick = ()=>mostraFluxo(faseSel.value, q, tr.dataset.lote));
     if (focoUsuario){
       const bb = focusQuadra(q);
-      if (bb){ focouQ = true; fitQuadra(bb); } else { focouQ = false; }
+      if (bb){ focouQ = true; fitQuadra(bb); } else { focouQ = false; fitTudo(true); }
     } else { focouQ = false; fitTudo(true); }
   }
   const pkey = f => f.toLowerCase().includes('aroeira') ? 'aroeiras' : f.toLowerCase().includes('jacarand') ? 'jacarandas' : f.toLowerCase().includes('angico') ? 'angicos' : null;
@@ -254,7 +254,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     const meta = pk && plano[pk] ? plano[pk].meta : null;
     let nome = data[fase].fase.split('— ')[1] || data[fase].fase;
     if (!row){
-      detb.innerHTML = `<b>${nome} — Quadra ${quadra}, Lote ${lote}</b><p>Fluxo de pagamento detalhado não consta para este lote na tabela de outubro/2026 extraída. Confira pelo WhatsApp.</p><a href="https://wa.me/5562981428585?text=${encodeURIComponent('Olá! Quero consultar o lote '+lote+', quadra '+quadra+' ('+nome+').')}" style="display:block;margin-top:8px;text-align:center;background:#0a6b3d;color:#fff;padding:12px;border-radius:8px;text-decoration:none;font-weight:700">Consultar pelo WhatsApp</a><div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px"><b>Sinal + taxa administrativa de R$ 150,00</b> — taxa fixa por lote, cobrada com o sinal e n&atilde;o somada &agrave;s parcelas.</div>`;
+      detb.innerHTML = `<b>${nome} — Quadra ${quadra}, Lote ${lote}</b><p>Fluxo de pagamento detalhado não consta para este lote na tabela de novembro/2026 extraída. Confira pelo WhatsApp.</p><a href="https://wa.me/5562981428585?text=${encodeURIComponent('Olá! Quero consultar o lote '+lote+', quadra '+quadra+' ('+nome+').')}" style="display:block;margin-top:8px;text-align:center;background:#0a6b3d;color:#fff;padding:12px;border-radius:8px;text-decoration:none;font-weight:700">Consultar pelo WhatsApp</a><div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px"><b>Sinal + taxa administrativa de R$ 150,00</b> — taxa fixa por lote, cobrada com o sinal e n&atilde;o somada &agrave;s parcelas.</div>`;
       document.getElementById('detgsum').textContent = `${nome} — Q${quadra} · Lote ${lote}`;
       det.style.display='block';
       if (matchMedia('(max-width:640px)').matches) det.classList.add('min'); else det.classList.remove('min');
@@ -274,12 +274,12 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     const linhaAv = row.av.map((v,i)=>`<tr><td>${pav[i]}x</td><td>R$ ${v}</td></tr>`).join('');
     detb.innerHTML = `
       <b>${nome} — Quadra ${quadra}, Lote ${lote}</b> · Área ${row.area} m²<br>
-      <span style="font-size:12px;color:#555">Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026), sem cálculo nosso. Estoque não confirmado.</span>
+      <span style="font-size:12px;color:#555">Valores exatos da tabela oficial novembro/2026 (vigência 01/11/2026), sem cálculo nosso. Estoque não confirmado.</span>
       <p style="margin:8px 0 2px"><b>Valor à vista: R$ ${row.cash}</b></p>
       <div style="border:1px solid #cde;border-radius:8px;padding:8px;margin:6px 0">
         <b>Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)</b><br>
         Valor na proposta: <b>R$ ${row.prop}</b><br>
-        Sinal (Ato): R$ ${row.ato} + 3x de R$ ${row.com3}${row.ent13 ? ' · Entrada: R$ '+row.ent13 : ''}<br>
+        Sinal (Ato): R$ ${row.ato} + 3x de R$ ${row.com3} <b>+ taxa adm R$ ${fmtN(speN)}</b> (= R$ ${fmtN(sinalTot+speN)} no ato)${row.ent13 ? ' · Entrada: R$ '+row.ent13 : ''}<br>
         <div style="margin:6px 0;padding:8px 10px;background:#fef9c3;border:2px solid #eab308;border-radius:8px;font-size:14px">${linhaTaxa1}</div>
         Parcelas mensais por prazo:
         <table style="margin-top:4px"><tr><th>Prazo</th><th>Parcela</th></tr>${linha13}</table>
@@ -287,7 +287,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
       <div style="border:1px solid #cde;border-radius:8px;padding:8px;margin:6px 0">
         <b>Plano 2 — Entrada à vista (1ª parcela em 30 dias)</b><br>
         Valor na proposta: <b>R$ ${row.avprop}</b><br>
-        Entrada à vista: não confirmada — a coluna impressa ("comissão total") registra R$ ${row.ent}; confirmar com a loteadora se corresponde à entrada do comprador.<br>
+        Entrada à vista: não confirmada — a coluna impressa ("comissão total") registra R$ ${row.ent}; confirmar com a loteadora se corresponde à entrada do comprador. <b>+ taxa adm R$ ${fmtN(speN)}</b> por lote, cobrada com a entrada.<br>
         Parcelas mensais por prazo:
         <table style="margin-top:4px"><tr><th>Prazo</th><th>Parcela</th></tr>${linhaAv}</table>
         <div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px">${linhaTaxa2}</div>
@@ -304,7 +304,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     ajustaMapaSheet();
     document.getElementById('detpdf').onclick = baixaPDF;
     document.getElementById('detqro').onclick = abreFormProposta;
-    document.getElementById('detres').href = 'https://wa.me/5562982165619?text=' + encodeURIComponent(`Olá! Quero RESERVAR o lote ${lote}, quadra ${quadra} (${nome}), área ${row.area} m² — tabela out/2026 à vista R$ ${row.cash}. Entendo que a reserva vale por até 24h e só vale após confirmação da equipe. Meu nome e telefone:`);
+    document.getElementById('detres').href = 'https://wa.me/5562982165619?text=' + encodeURIComponent(`Olá! Quero RESERVAR o lote ${lote}, quadra ${quadra} (${nome}), área ${row.area} m² — tabela nov/2026 à vista R$ ${row.cash}. Entendo que a reserva vale por até 24h e só vale após confirmação da equipe. Meu nome e telefone:`);
   }
   function baixaPDF(){
     if (!detDoc) return;
@@ -314,12 +314,12 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     const spePdfV = (function(s){ if (s==null||s==='') return 150; const v = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return isNaN(v)?150:v; })(row.spe);
     const spePdfT = spePdfV.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
     let y = 18;
-    d.setFontSize(15); d.text('Reserva do Parque — fluxo de pagamento do lote (tabela outubro/2026)', 14, y); y += 9;
+    d.setFontSize(15); d.text('Reserva do Parque — fluxo de pagamento do lote', 14, y); y += 9;
     d.setFontSize(12); d.text(`${nome} — Quadra ${quadra}, Lote ${lote} — Área ${row.area} m²`, 14, y); y += 8;
-    d.setFontSize(9); d.text('Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026). Estoque e condições não confirmados.', 14, y); y += 10;
+    d.setFontSize(9); d.text('Valores exatos da tabela oficial novembro/2026 (vigência 01/11/2026). Estoque e condições não confirmados.', 14, y); y += 10;
     d.setFontSize(12); d.text(`Valor à vista: R$ ${row.cash}`, 14, y); y += 9;
     d.setFontSize(11); d.text('Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)', 14, y); y += 6;
-    d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.prop} — Ato: R$ ${row.ato} + 3x de R$ ${row.com3}`, 14, y); y += 6;
+    d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.prop} — Ato: R$ ${row.ato} + 3x de R$ ${row.com3} + taxa adm R$ ${spePdfT}`, 14, y); y += 6;
     if (row.ent13) { d.text(`Entrada: R$ ${row.ent13}`, 14, y); y += 6; } else { d.text('Entrada: não informada nesta linha da tabela', 14, y); y += 6; }
     d.text(`Sinal (Ato) + taxa administrativa de R$ ${spePdfT} por lote (tabela oficial) — não somada às parcelas.`, 14, y); y += 6;
     row.par.forEach((v,i)=>{ d.text(`Prazo ${p13[i]}x — parcela R$ ${v}`, 18, y); y += 5.5; });
@@ -327,7 +327,8 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     d.setFontSize(11); d.text('Plano 2 — Entrada à vista (1ª parcela em 30 dias)', 14, y); y += 6;
     d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.avprop}`, 14, y); y += 6;
     d.text(`Entrada à vista: não confirmada — coluna impressa ("comissão total") registra R$ ${row.ent};`, 14, y); y += 5.5;
-    d.text('confirmar com a loteadora se corresponde à entrada do comprador.', 14, y); y += 6;
+    d.text('confirmar com a loteadora se corresponde à entrada do comprador.', 14, y); y += 5.5;
+    d.text(`+ taxa administrativa de R$ ${spePdfT} por lote (tabela oficial), cobrada com a entrada — não somada às parcelas.`, 14, y); y += 6;
     row.av.forEach((v,i)=>{ d.text(`Prazo ${pav[i]}x — parcela R$ ${v}`, 18, y); y += 5.5; });
     y += 5;
     d.setFontSize(9); d.text('Títulos dos planos e cabeçalhos conforme o documento original da loteadora.', 14, y);
@@ -428,7 +429,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
       </div>
       <label style="display:flex;gap:8px;margin:10px 0;font-size:13px;align-items:flex-start">
         <input id="f_lgpd" type="checkbox" style="margin-top:3px">
-        <span>Autorizo o uso dos meus dados apenas para montar e revisar esta proposta (LGPD). Sei que é um RASCUNHO sujeito à revisão do Junio, que os valores vêm da tabela oficial outubro/2026 e que a leitura dos documentos acontece no meu aparelho.</span>
+        <span>Autorizo o uso dos meus dados apenas para montar e revisar esta proposta (LGPD). Sei que é um RASCUNHO sujeito à revisão do Junio, que os valores vêm da tabela oficial novembro/2026 e que a leitura dos documentos acontece no meu aparelho.</span>
       </label>
       <button id="f_gerar" style="width:100%;padding:12px;font:700 15px system-ui;background:#0a6b3d;color:#fff;border:0;border-radius:8px">Gerar proposta rascunho (PDF no modelo Solot)</button>
       <div id="f_out" style="margin-top:8px"></div>`;
@@ -467,22 +468,25 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
       tel1: v('f_tel'), email: v('f_email')
     };
     const i = prazoIdx || 0;
+    const taxaProp = (function(s){ if (s==null||s==='') return '150,00'; const v = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return (isNaN(v)?150:v).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); })(row.spe);
     let condicoes, valorTotal, obsPlano;
     if (plano === '2') {
       valorTotal = row.avprop;
       condicoes = [
         {quantidade:'1', tipo:'Entrada à vista', valor:'A confirmar', inicio:'A confirmar'},
+        {quantidade:'1', tipo:'Taxa administrativa', valor:'R$ '+taxaProp, inicio:'Com a entrada'},
         {quantidade:pav[i]+'', tipo:'Parcelas mensais', valor:'R$ '+row.av[i], inicio:'1ª em 30 dias', periodicidade:'Mensal'}
       ];
-      obsPlano = 'Plano 2 — Entrada à vista (1ª parcela em 30 dias). Entrada: a confirmar com a loteadora (a coluna impressa "comissão total" registra R$ '+row.ent+').';
+      obsPlano = 'Plano 2 — Entrada à vista (1ª parcela em 30 dias). Entrada: a confirmar com a loteadora (a coluna impressa "comissão total" registra R$ '+row.ent+'). Taxa administrativa de R$ '+taxaProp+' por lote, cobrada com a entrada.';
     } else {
       valorTotal = row.prop;
       condicoes = [
         {quantidade:'1', tipo:'Ato (sinal)', valor:'R$ '+row.ato, inicio:'Na assinatura'},
         {quantidade:'3', tipo:'Parcelas', valor:'R$ '+row.com3, periodicidade:'Mensal'},
+        {quantidade:'1', tipo:'Taxa administrativa', valor:'R$ '+taxaProp, inicio:'No ato'},
         {quantidade:p13[i]+'', tipo:'Parcelas mensais', valor:'R$ '+row.par[i], inicio:'1ª em 120 dias', periodicidade:'Mensal'}
       ];
-      obsPlano = 'Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias). Entrada: '+(row.ent13 ? 'R$ '+row.ent13 : 'não informada nesta linha da tabela — a confirmar')+'.';
+      obsPlano = 'Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias). Entrada: '+(row.ent13 ? 'R$ '+row.ent13 : 'não informada nesta linha da tabela — a confirmar')+'. Taxa administrativa de R$ '+taxaProp+' por lote, cobrada no ato.';
     }
     const hoje = new Date();
     const dataDoc = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
@@ -492,7 +496,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
       rua: logradouro || undefined,
       quadra: 'Q'+quadra, lote: 'L'+lote, area: areaFmt,
       valorTotal, condicoes,
-      obs: 'RASCUNHO sem validade comercial, gerado pelo interessado no mapa digital e SUJEITO À REVISÃO do Junio. Valores da tabela oficial outubro/2026 (vigência 01/10/2026). '+obsPlano+' Demais prazos e condições conforme a tabela. Estoque e disponibilidade a confirmar.',
+      obs: 'RASCUNHO sem validade comercial, gerado pelo interessado no mapa digital e SUJEITO À REVISÃO do Junio. Valores da tabela oficial novembro/2026 (vigência 01/11/2026). '+obsPlano+' Demais prazos e condições conforme a tabela. Estoque e disponibilidade a confirmar.',
       cidade: 'Senador Canedo/GO', dataDoc,
       corretagem: false
     };
@@ -507,7 +511,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     }
     const fname = 'proposta-rascunho-q'+quadra+'-l'+lote+'.pdf';
     doc.save(fname);
-    const resumo = 'Olá! Segue minha PROPOSTA RASCUNHO: '+nome+', quadra '+quadra+', lote '+lote+', área '+row.area+' m². Tabela out/2026: à vista R$ '+row.cash+'; '+(plano==='2' ? 'plano 2 proposta R$ '+row.avprop+' (entrada à vista a confirmar, '+pav[i]+'x de R$ '+row.av[i]+')' : 'plano 1 proposta R$ '+row.prop+' (ato R$ '+row.ato+' + 3x R$ '+row.com3+', '+p13[i]+'x de R$ '+row.par[i]+')')+'. Interessado: '+v('f_nome')+', CPF '+v('f_cpf')+', WhatsApp '+v('f_tel')+(v('f_email') ? ', e-mail '+v('f_email') : '')+'. Anexo o PDF do rascunho. Sei que é rascunho sujeito à revisão do Junio.';
+    const resumo = 'Olá! Segue minha PROPOSTA RASCUNHO: '+nome+', quadra '+quadra+', lote '+lote+', área '+row.area+' m². Tabela nov/2026: à vista R$ '+row.cash+'; '+(plano==='2' ? 'plano 2 proposta R$ '+row.avprop+' (entrada à vista a confirmar, '+pav[i]+'x de R$ '+row.av[i]+')' : 'plano 1 proposta R$ '+row.prop+' (ato R$ '+row.ato+' + 3x R$ '+row.com3+', '+p13[i]+'x de R$ '+row.par[i]+')')+'. Interessado: '+v('f_nome')+', CPF '+v('f_cpf')+', WhatsApp '+v('f_tel')+(v('f_email') ? ', e-mail '+v('f_email') : '')+'. Anexo o PDF do rascunho. Sei que é rascunho sujeito à revisão do Junio.';
     out.innerHTML = '<b>PDF rascunho gerado e baixado.</b> Envie para a equipe do Junio:'+
       '<div style="display:grid;gap:6px;margin-top:6px">'+
       '<button id="f_share" style="padding:12px;background:#25d366;color:#fff;border:0;border-radius:8px;font:700 15px system-ui">Enviar PDF pelo WhatsApp</button>'+
@@ -527,6 +531,7 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
     };
   }
   // mantém o lote visível na faixa acima da folha (detalhe/proposta)
+  function updDetH(){ try{ const det=document.getElementById('det'); let h=52; if (det && det.style.display==='block'){ h=Math.max(64, det.offsetHeight+10); } document.documentElement.style.setProperty('--deth', h+'px'); }catch(e){} }
   function ajustaMapaSheet(){
     try {
       if (!detDoc) return;
@@ -535,15 +540,17 @@ Promise.all([fetch('mapa/lotes.json?v=7').then(r=>r.json()), fetch('mapa/plano.j
       if (!pp) return;
       const detEl = document.getElementById('det');
       const detH = detEl.offsetHeight || 0;
+      updDetH();
       const visY = map.getSize().y - detH;
       const pt = map.latLngToContainerPoint(pp);
       const dy = pt.y - visY/2;
       if (Math.abs(dy) > 12) map.panBy([0, dy], {animate:true});
     } catch(e){}
   }
-  document.getElementById('detc').onclick = ()=>{document.getElementById('det').style.display='none'};
-  faseSel.onchange = fillQuadras;
-  quadraSel.onchange = ()=>{ focoUsuario = true; fillLotes(); };
+  document.getElementById('detc').onclick = ()=>{document.getElementById('det').style.display='none'; updDetH();};
+  const fechaDet = ()=>{ document.getElementById('det').style.display='none'; updDetH(); };
+  faseSel.onchange = ()=>{ fechaDet(); fillQuadras(); };
+  quadraSel.onchange = ()=>{ fechaDet(); focoUsuario = true; fillLotes(); };
   fillQuadras();
   ajustaZoom();
 });

@@ -13,7 +13,7 @@
   #atdPanel .opt:hover{background:#f0fdf4}
   #atdPanel .zap{display:block;text-align:center;background:#25d366;color:#fff;text-decoration:none;border-radius:8px;padding:11px;font:700 14px system-ui;margin:8px 0}
   @media (max-width:640px){
-    #atdBtn{bottom:calc(52px + env(safe-area-inset-bottom,0px))}
+    #atdBtn{bottom:calc(var(--deth,52px) + env(safe-area-inset-bottom,0px))}
     #atdPanel{bottom:calc(104px + env(safe-area-inset-bottom,0px))}
   }`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);

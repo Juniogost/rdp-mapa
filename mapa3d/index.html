@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Reserva do Parque — Mapa 3D com sol</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
@@ -24,13 +24,26 @@
   #nota b{color:#fbbf24}
   #sol.col #solbody{display:none}
   @media (max-width:640px){ #nota{font-size:10px} #sol{width:210px;font-size:11px} }
+#hud{padding-top:calc(6px + env(safe-area-inset-top))}body{padding-bottom:env(safe-area-inset-bottom)}
+html,body{overflow-x:hidden}
+#painel{overflow-x:auto}
+@media (max-width:640px){
+  .maplibregl-ctrl-bottom-right{bottom:calc(var(--deth,60px) + 58px) !important; right:8px}
+  #lgdiv #lghd{cursor:pointer;user-select:none}
+  #lgdiv #lgbd{display:none}
+  #lgdiv.ab #lgbd{display:block}
+  #atdBtn.sobe{bottom:calc(var(--deth,220px) + env(safe-area-inset-bottom,0px))}
+  #atdBtn.sobe+#atdPanel{bottom:calc(var(--deth,220px) + 52px + env(safe-area-inset-bottom,0px))}
+}
 </style>
 </head>
 <body>
 <div id="hud">
   <strong>Reserva do Parque — Senador Canedo/GO</strong>
   <span class="on">3D + Sol</span>
-  <a href="https://juniogost.github.io/rdp-hum-preview/">Versão 2D →</a>
+  <a href="https://juniogost.github.io/rdp-mapa/">Versão 2D →</a>
+  <button class="vista" id="vistaAerea">Aérea</button>
+  <button class="vista" id="vistaPersp">Perspectiva</button>
 </div>
 <div id="map"></div>
 <div id="sol">
@@ -54,31 +67,38 @@
 </div>
 <style>
 .chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700}
-.livre{background:#d8f3dc;color:#1b5e20}.embreve{background:#ececec;color:#777}
+.livre{background:#d8f3dc;color:#1b5e20}.embreve{background:#ececec;color:#777}.vendido{background:#fee2e2;color:#b91c1c}.reservado{background:#ffedd5;color:#9a3412}.consultar{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
 #lotes table{width:100%;border-collapse:collapse;font-size:13px}
 #lotes td,#lotes th{padding:5px;border-bottom:1px solid #eee;text-align:left}
 tr[data-lote]{background:#f4fbf5}
+#hud .vista{background:#fff;color:#14532d;border:0;border-radius:6px;padding:4px 10px;font:700 12px system-ui;cursor:pointer}
+tr.flash{animation:pisca 1.2s ease 3}
+@keyframes pisca{0%,100%{background:#f4fbf5}50%{background:#fde68a}}
+.acoes{display:flex;gap:6px;margin-top:6px}
+.acoes button{flex:1;padding:10px;border-radius:8px;cursor:pointer;font:700 13px system-ui}
 .val{font-size:12px;display:block;color:#1b5e20}
 </style>
 <div id="nota">
+  <div id="dispdata"></div>
   <b>Aviso:</b> visão 3D EXPERIMENTAL da prancha oficial (planta plana inclinada; sem volumes/altimetria).
-  Posição geográfica e norte APROXIMADOS (prancha não georreferenciada) — a simulação do sol ganha precisão quando o georreferenciamento for confirmado.
+  PRANCHA OFICIAL GEORREFERENCIADA pelas coordenadas UTM da moldura (SIRGAS 2000); norte verdadeiro aplicado (convergência -0,5°). Fundo de satélite: Esri World Imagery. Lotes clicáveis coloridos no mapa nesta etapa: apenas Jardim dos Jacarandás (demais fases em calibração).
   Disponibilidade e valores: WhatsApp <a style="color:#86efac" href="https://wa.me/5562981428585">62 98142-8585</a>.
 </div>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-const LAT0=-16.666688, LNG0=-49.138081;
+const LAT0=-16.670380, LNG0=-49.143633;
 const CENTRO = [LNG0, LAT0];
 const map = new maplibregl.Map({
   container:'map',
-  style:{version:8, sky:{'sky-color':'#bcd6ee','horizon-color':'#e9e5db','fog-color':'#e9e5db','sky-horizon-blend':0.4,'horizon-fog-blend':0,'fog-ground-blend':0,'atmosphere-blend':0}, sources:{prancha:{type:'raster', tiles:['tiles3d/{z}/{x}/{y}.png?v=4'], tileSize:256, minzoom:10, maxzoom:19}},
+  style:{version:8, glyphs:'./glyphs/{fontstack}/{range}.pbf', sky:{'sky-color':'#bcd6ee','horizon-color':'#e9e5db','fog-color':'#e9e5db','sky-horizon-blend':0.4,'horizon-fog-blend':0,'fog-ground-blend':0,'atmosphere-blend':0}, sources:{esri:{type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19, attribution:'Esri, Maxar, Earthstar Geographics'}, prancha:{type:'raster', tiles:['tiles3dgeo/{z}/{x}/{y}.png?v=3'], tileSize:256, minzoom:13, maxzoom:20}},
     layers:[{id:'fundo',type:'background',paint:{'background-color':'#e9e5db'}},
+      {id:'esri',type:'raster',source:'esri',paint:{'raster-fade-duration':0}},
       {id:'prancha',type:'raster',source:'prancha',paint:{'raster-fade-duration':0,'raster-resampling':'linear'}}]},
-  center: CENTRO, zoom: 15.6, pitch: 42, bearing: -15, maxPitch: 55, attributionControl:false,
-  maxBounds: [[-49.152752,-16.682176],[-49.123410,-16.651201]]
+  center: CENTRO, zoom: 15.6, pitch: 42, bearing: -15, maxPitch: 55, maxZoom: 20.5, hash:true, attributionControl:{compact:true},
+  maxBounds: [[-49.156,-16.684],[-49.128,-16.656]]
 });
-const BBOX=[[-49.148627,-16.684307],[-49.121441,-16.657201]];
-if (matchMedia('(max-width:640px)').matches){
+const BBOX=[[-49.1486,-16.6752],[-49.1387,-16.6655]];
+if (!location.hash.includes('/') && matchMedia('(max-width:640px)').matches){
   const cam=map.cameraForBounds(BBOX,{padding:{top:96,bottom:120,left:10,right:10},bearing:-15,pitch:42});
   if(cam) map.jumpTo(cam);
 }
@@ -91,6 +111,8 @@ map.on('load', ()=>{
   atualizaSol();
 });
 map.addControl(new maplibregl.NavigationControl({visualizePitch:true}), 'bottom-right');
+document.getElementById('vistaAerea').onclick = ()=>{ const cam = map.cameraForBounds(BBOX,{padding:{top:96,bottom:120,left:10,right:10},bearing:0,pitch:0}); if(cam) map.easeTo({center:cam.center,zoom:cam.zoom,bearing:0,pitch:0,duration:900}); };
+document.getElementById('vistaPersp').onclick = ()=>{ const cam = map.cameraForBounds(BBOX,{padding:{top:96,bottom:120,left:10,right:10},bearing:-15,pitch:55}); if(cam) map.easeTo({center:cam.center,zoom:cam.zoom,bearing:-15,pitch:45,duration:900}); };
 const nota3=document.getElementById('nota');
 if (matchMedia('(max-width:640px)').matches) nota3.classList.add('col');
 nota3.onclick=()=>{nota3.classList.toggle('col');setTimeout(ajustaPainel,30);};
@@ -165,8 +187,11 @@ document.getElementById('btnPor').addEventListener('click', ()=>{
 <button id="detc" style="float:right;border:0;background:#eee;border-radius:6px;padding:4px 10px;font-weight:700">fechar ✕</button>
 <div id="detb"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../status.js"></script>
 <script>
-Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>r.json())]).then(([data, plano])=>{
+Promise.all([fetch('lotes.json?v=8').then(r=>r.json()), fetch('plano.json?v=7').then(r=>r.json())]).then(async ([data, plano])=>{
+  const rdpSt = await RDPStatus.aplicar('../status.json', data);
+  { const dd = document.getElementById('dispdata'); if (dd) dd.textContent = RDPStatus.linha(rdpSt); }
   const faseSel = document.getElementById('fase'), quadraSel = document.getElementById('quadra');
   const leg = document.getElementById('leg');
   const pbody = document.getElementById('pbody');
@@ -185,36 +210,98 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
     const ids = Object.keys(lotesQ);
     ptit.textContent = d.fase.split('— ')[1] + ' — Quadra ' + q + ' (' + ids.length + ' lotes listados)';
     const brl = v => v ? 'R$ ' + Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0}) : '';
-    let livres = 0;
+    let livres = 0, vendidos = 0, reservados = 0, consultar = 0;
     let html = '<table><tr><th>Lote</th><th>Área (m²)</th><th>Logradouro</th><th>Situação</th></tr>';
     for (const id of ids){
       const l = lotesQ[id];
+      const av = RDPStatus.avail(l), temTab = RDPStatus.temTabela(l);
       let st;
-      if (l.status === 'tabela_out2026'){
+      if (av === 'livre' && temTab){
         livres++;
         const vals = [l.valor_avista && brl(l.valor_avista)+' à vista', l.valor_proposta && brl(l.valor_proposta)+' proposta'].filter(Boolean).join('<br>');
         st = `<span class="chip livre">Livre</span><span class="val">${vals}</span>`;
+      } else if (av === 'vendido'){
+        vendidos++; st = '<span class="chip vendido">Vendido</span>';
+      } else if (av === 'reservado'){
+        reservados++; st = '<span class="chip reservado">Reservado</span>';
+      } else if (av === 'consultar'){
+        consultar++; st = '<span class="chip consultar">Consultar a equipe</span>';
+      } else if (av === 'livre'){
+        livres++; st = '<span class="chip livre">Livre</span><span class="val">valor sob consulta</span>';
       } else {
         st = '<span class="chip embreve">Em breve</span>';
       }
-      const clic = l.status === 'tabela_out2026' ? ` data-lote="${id}" style="cursor:pointer"` : '';
+      const clic = (av === 'livre' && temTab) ? ` data-lote="${id}" style="cursor:pointer"` : '';
       html += `<tr${clic}><td>${id}</td><td>${l.area_m2.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>${l.logradouro}</td><td>${st}</td></tr>`;
     }
     lotes.innerHTML = html + '</table>';
     lotes.querySelectorAll('tr[data-lote]').forEach(tr => tr.onclick = ()=>mostraFluxo(faseSel.value, q, tr.dataset.lote));
     const total = ids.length;
-    leg.innerHTML = `<span class="chip livre">Livre ${livres}</span><span class="chip embreve">Em breve ${total-livres}</span>`;
+    { const partes = [`<span class="chip livre">Livre ${livres}</span>`];
+      if (reservados) partes.push(`<span class="chip reservado">Reservado ${reservados}</span>`);
+      if (vendidos) partes.push(`<span class="chip vendido">Vendido ${vendidos}</span>`);
+      if (consultar) partes.push(`<span class="chip consultar">Consultar ${consultar}</span>`);
+      const emb = total - livres - vendidos - reservados - consultar;
+      if (emb) partes.push(`<span class="chip embreve">Em breve ${emb}</span>`);
+      leg.innerHTML = partes.join(' '); }
   }
   const pkey = f => f.toLowerCase().includes('aroeira') ? 'aroeiras' : f.toLowerCase().includes('jacarand') ? 'jacarandas' : f.toLowerCase().includes('angico') ? 'angicos' : null;
   let detDoc = null;
+  function linkLote(fase, quadra, lote){ const u = new URL(location.href); u.search = '?fase='+fase+'&quadra='+quadra+'&lote='+lote; return u.toString(); }
+  function copiaLink(){
+    if(!detDoc) return;
+    const u = linkLote(faseSel.value, detDoc.quadra, detDoc.lote);
+    const b = document.getElementById('detlink');
+    const ok = sim => { b.textContent = sim ? '✔ Link copiado' : '🔗 ' + u; setTimeout(()=>{ b.textContent = '🔗 Copiar link deste lote'; }, 3000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(()=>ok(true), ()=>ok(false)); else ok(false);
+  }
+  function vaiParaLote(fase, quadra, lote){
+    if (faseSel.value !== fase){ faseSel.value = fase; faseSel.onchange(); }
+    fillQuadras(); quadraSel.value = quadra; fillLotes();
+    mostraFluxo(fase, quadra, lote);
+    const tr = document.querySelector('tr[data-lote="' + lote + '"]');
+    if (tr){ tr.classList.add('flash'); tr.scrollIntoView({block:'nearest'}); setTimeout(()=>tr.classList.remove('flash'), 4000); }
+  }
+  function livresOrdem(){
+    const num = s => parseInt(s,10) || 0, out = [];
+    for (const f of Object.keys(data)){
+      const qs = Object.keys(data[f].quadras).sort((a,b)=>num(a)-num(b));
+      for (const q of qs){
+        const ids = Object.keys(data[f].quadras[q] || {}).sort((a,b)=>num(a)-num(b));
+        for (const l of ids){ const it = data[f].quadras[q][l]; if (it && RDPStatus.avail(it) === 'livre' && RDPStatus.temTabela(it)) out.push([f, q, l]); }
+      }
+    }
+    return out;
+  }
+  function navegaLivre(dir){
+    if(!detDoc) return;
+    const seq = livresOrdem();
+    if (!seq.length) return;
+    const cf = faseSel.value, cq = String(detDoc.quadra), cl = String(detDoc.lote);
+    let ix = seq.findIndex(t => t[0] === cf && t[1] === cq && t[2] === cl);
+    if (ix < 0) ix = dir > 0 ? -1 : 0;
+    const alvo = seq[(ix + dir + seq.length) % seq.length];
+    vaiParaLote(alvo[0], alvo[1], alvo[2]);
+  }
+  function proximoLivre(){ navegaLivre(1); }
+  function anteriorLivre(){ navegaLivre(-1); }
   function mostraFluxo(fase, quadra, lote){
     const det = document.getElementById('det'), detb = document.getElementById('detb');
     const pk = pkey(data[fase].fase);
     const row = pk && plano[pk] && plano[pk].rows ? plano[pk].rows[quadra + '-' + lote] : null;
     const meta = pk && plano[pk] ? plano[pk].meta : null;
     let nome = data[fase].fase.split('— ')[1] || data[fase].fase;
+    const _lot = data[fase].quadras[quadra] && data[fase].quadras[quadra][lote];
+    const _av = _lot ? RDPStatus.avail(_lot) : null, _tt = _lot ? RDPStatus.temTabela(_lot) : false;
+    const _cat = _av==='vendido'?'vendido':_av==='reservado'?'reservado':_av==='consultar'?'consultar':(_av==='livre'||_tt)?'livre':'embreve';
+    const _stTxt = {vendido:'Vendido',reservado:'Reservado',consultar:'Consultar disponibilidade',livre:'Livre',embreve:'Em breve'}[_cat];
+    const _stCor = {vendido:'#dc2626',reservado:'#f97316',consultar:'#f59e0b',livre:'#16a34a',embreve:'#6b7280'}[_cat];
+    const _area = _lot && _lot.area_m2 ? String(_lot.area_m2).replace('.',',')+' m²' : null;
+    const cabLote = `<span style="display:inline-block;padding:2px 9px;border-radius:999px;background:${_stCor};color:#fff;font-size:12px;font-weight:700;vertical-align:middle">${_stTxt}</span>`
+      + (_area ? ` <span style="font-size:13px;color:#374151">· Área: <b>${_area}</b></span>` : ' <span style="font-size:13px;color:#374151">· Área: não consta na tabela</span>')
+      + (_lot && _lot.logradouro ? ` <span style="font-size:13px;color:#374151">· ${_lot.logradouro}</span>` : '');
     if (!row){
-      detb.innerHTML = `<b>${nome} — Quadra ${quadra}, Lote ${lote}</b><p>Fluxo de pagamento detalhado não consta para este lote na tabela de outubro/2026 extraída. Confira pelo WhatsApp.</p><div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px"><b>Sinal + taxa administrativa de R$ 150,00</b> — taxa fixa por lote, cobrada com o sinal e não somada às parcelas.</div>`;
+      detb.innerHTML = `<b>${nome} — Quadra ${quadra}, Lote ${lote}</b> ${cabLote}<p>Fluxo de pagamento detalhado não consta para este lote na tabela de novembro/2026 extraída. Confira pelo WhatsApp.</p><div style="margin-top:6px;padding:6px 8px;background:#fef9c3;border:1px solid #eab308;border-radius:6px;font-size:13px"><b>Sinal + taxa administrativa de R$ 150,00</b> — taxa fixa por lote, cobrada com o sinal e não somada às parcelas.</div>`;
       det.style.display='block'; detDoc=null; return;
     }
     const p13 = meta.prazos13, pav = meta.prazosAv;
@@ -230,8 +317,8 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
     const linha13 = row.par.map((v,i)=>`<tr><td>${p13[i]}x</td><td>R$ ${v}</td></tr>`).join('');
     const linhaAv = row.av.map((v,i)=>`<tr><td>${pav[i]}x</td><td>R$ ${v}</td></tr>`).join('');
     detb.innerHTML = `
-      <b>${nome} — Quadra ${quadra}, Lote ${lote}</b> · Área ${row.area} m²<br>
-      <span style="font-size:12px;color:#555">Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026), sem cálculo nosso. Estoque não confirmado.</span>
+      <b>${nome} — Quadra ${quadra}, Lote ${lote}</b> ${cabLote}<br>
+      <span style="font-size:12px;color:#555">Valores exatos da tabela oficial novembro/2026 (vigência 01/11/2026), sem cálculo nosso. Estoque não confirmado.</span>
       <p style="margin:8px 0 2px"><b>Valor à vista: R$ ${row.cash}</b></p>
       <div style="border:1px solid #cde;border-radius:8px;padding:8px;margin:6px 0">
         <b>Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)</b><br>
@@ -251,11 +338,19 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
       </div>
       <span style="font-size:12px;color:#555">Títulos dos planos e cabeçalhos conforme o documento original da loteadora; confirmar condições antes de propor.</span><br>
       <button id="detpdf" style="margin-top:8px;width:100%;padding:12px;font:700 15px system-ui;background:#0a6b3d;color:#fff;border:0;border-radius:8px">Baixar PDF deste lote (fluxo de pagamento)</button>
-      <button id="detqro" style="margin-top:6px;width:100%;padding:12px;font:700 15px system-ui;background:#1d4ed8;color:#fff;border:0;border-radius:8px">Quero este lote — iniciar proposta</button>`;
+      <button id="detqro" style="margin-top:6px;width:100%;padding:12px;font:700 15px system-ui;background:#1d4ed8;color:#fff;border:0;border-radius:8px">Quero este lote — iniciar proposta</button>
+      <div class="acoes">
+        <button id="detlink" style="background:#475569;color:#fff;border:0">🔗 Copiar link deste lote</button>
+        <button id="detant" style="background:#fff;color:#0a6b3d;border:1px solid #0a6b3d">← Anterior livre</button>
+        <button id="detprox" style="background:#fff;color:#0a6b3d;border:1px solid #0a6b3d">Próximo lote livre →</button>
+      </div>`;
     det.style.display='block';
     detDoc = {nome, quadra, lote, row, p13, pav};
     document.getElementById('detpdf').onclick = baixaPDF;
     document.getElementById('detqro').onclick = abreFormProposta;
+    document.getElementById('detlink').onclick = copiaLink;
+    document.getElementById('detprox').onclick = proximoLivre;
+    document.getElementById('detant').onclick = anteriorLivre;
   }
   function baixaPDF(){
     if (!detDoc) return;
@@ -265,9 +360,9 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
     const spePdfV = (function(s){ if (s==null||s==='') return 150; const v = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return isNaN(v)?150:v; })(row.spe);
     const spePdfT = spePdfV.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
     let y = 18;
-    d.setFontSize(15); d.text('Reserva do Parque — fluxo de pagamento do lote (tabela outubro/2026)', 14, y); y += 9;
+    d.setFontSize(15); d.text('Reserva do Parque — fluxo de pagamento do lote', 14, y); y += 9;
     d.setFontSize(12); d.text(`${nome} — Quadra ${quadra}, Lote ${lote} — Área ${row.area} m²`, 14, y); y += 8;
-    d.setFontSize(9); d.text('Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026). Estoque e condições não confirmados.', 14, y); y += 10;
+    d.setFontSize(9); d.text('Valores exatos da tabela oficial novembro/2026 (vigência 01/11/2026). Estoque e condições não confirmados.', 14, y); y += 10;
     d.setFontSize(12); d.text(`Valor à vista: R$ ${row.cash}`, 14, y); y += 9;
     d.setFontSize(11); d.text('Plano 1 — Entrada 1 + 3 (1ª parcela em 120 dias)', 14, y); y += 6;
     d.setFontSize(10); d.text(`Valor na proposta: R$ ${row.prop} — Ato: R$ ${row.ato} + 3x de R$ ${row.com3}`, 14, y); y += 6;
@@ -299,7 +394,7 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
       </div>
       <label style="display:flex;gap:8px;margin:10px 0;font-size:13px;align-items:flex-start">
         <input id="f_lgpd" type="checkbox" style="margin-top:3px">
-        <span>Autorizo o uso dos meus dados apenas para montar e revisar esta proposta (LGPD). Sei que é um RASCUNHO sujeito à revisão do Junio e que valores vêm da tabela oficial outubro/2026.</span>
+        <span>Autorizo o uso dos meus dados apenas para montar e revisar esta proposta (LGPD). Sei que é um RASCUNHO sujeito à revisão do Junio e que valores vêm da tabela oficial novembro/2026.</span>
       </label>
       <button id="f_gerar" style="width:100%;padding:12px;font:700 15px system-ui;background:#0a6b3d;color:#fff;border:0;border-radius:8px">Gerar proposta rascunho (PDF)</button>
       <div id="f_out" style="margin-top:8px"></div>`;
@@ -320,7 +415,7 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
     d.setFontSize(10);
     d.text(`Interessado: ${v('f_nome')} — CPF: ${v('f_cpf')}`, 14, y); y += 6;
     d.text(`WhatsApp: ${v('f_zap')}${v('f_email') ? ' — E-mail: '+v('f_email') : ''}`, 14, y); y += 9;
-    d.setFontSize(11); d.text('Valores exatos da tabela oficial outubro/2026 (vigência 01/10/2026):', 14, y); y += 6;
+    d.setFontSize(11); d.text('Valores exatos da tabela oficial novembro/2026 (vigência 01/11/2026):', 14, y); y += 6;
     d.setFontSize(10);
     d.text(`Valor à vista: R$ ${row.cash}`, 14, y); y += 6;
     d.text(`Plano 1 (Entrada 1+3, 1ª parcela em 120 dias): proposta R$ ${row.prop} — ato R$ ${row.ato} + 3x de R$ ${row.com3}`, 14, y); y += 6;
@@ -337,10 +432,168 @@ Promise.all([fetch('lotes.json').then(r=>r.json()), fetch('plano.json').then(r=>
       <span style="font-size:12px;color:#555">Seus dados vão só nessa conversa. O Junio revisa o rascunho antes de qualquer passo oficial.</span>`;
   }
   document.getElementById('detc').onclick = ()=>{document.getElementById('det').style.display='none'};
-  const FASE_BBOX={jacarandas:[[-49.145911,-16.681770],[-49.130901,-16.668209]],angicos:[[-49.1424105,-16.6698121],[-49.1331422,-16.6588858]],aroeiras:[[-49.1367777,-16.6706651],[-49.1298749,-16.6575009]]};
+  const FASE_BBOX={jacarandas:[[-49.147378,-16.674434],[-49.139888,-16.666325]],angicos:[[-49.1424105,-16.6698121],[-49.1331422,-16.6588858]],aroeiras:[[-49.1367777,-16.6706651],[-49.1298749,-16.6575009]]};
   faseSel.onchange = ()=>{ fillQuadras(); const bb=FASE_BBOX[pkey(data[faseSel.value].fase)]; if(bb){ const mob=matchMedia('(max-width:640px)').matches; const cam=map.cameraForBounds(bb,{padding:mob?{top:96,bottom:120,left:10,right:10}:60,bearing:-15,pitch:42}); if(cam) map.easeTo({center:cam.center,zoom:cam.zoom,bearing:-15,pitch:42,duration:900}); } };
   quadraSel.onchange = fillLotes;
+  // === Lotes vetoriais clicáveis no mapa (etapa 1: apenas Jacarandás, georreferência validada pino a pino) ===
+  try {
+    const pinsGeo = await fetch('pins-geo.json?v=1').then(r=>r.json());
+    const feats = [];
+    for (const fk of Object.keys(pinsGeo)){
+      if (!data[fk] || !data[fk].quadras) continue;
+      for (const q of Object.keys(pinsGeo[fk])){
+        const lq = data[fk].quadras[q] || {};
+        for (const l of Object.keys(pinsGeo[fk][q])){
+          const lot = lq[l]; if (!lot) continue;
+          const av = RDPStatus.avail(lot), tt = RDPStatus.temTabela(lot);
+          const cat = av==='vendido'?'vendido':av==='reservado'?'reservado':av==='consultar'?'consultar':(av==='livre'||tt)?'livre':'embreve';
+          if (cat==='consultar'||cat==='embreve') continue; // mapa mostra so Livre/Vendido/Reservado (pedido do Junio); status real segue no painel ao clicar
+          feats.push({type:'Feature',properties:{fase:fk,quadra:q,lote:l,cat:cat,rotulo:q+'·'+l},geometry:{type:'Point',coordinates:pinsGeo[fk][q][l]}});
+        }
+      }
+    }
+    // === Polígonos clicáveis: cada lote vira uma área (pins = canto da grade; linhas/colunas reconstruídas por quadra) ===
+    const polys = [];
+    {
+      const lat0 = -16.67*Math.PI/180, KX = 111320*Math.cos(lat0), KY = 110540;
+      for (const fk of Object.keys(pinsGeo)){
+        if (!data[fk] || !data[fk].quadras) continue;
+        for (const q of Object.keys(pinsGeo[fk])){
+          const pts = [];
+          for (const l of Object.keys(pinsGeo[fk][q])){
+            const c = pinsGeo[fk][q][l]; if (!c) continue;
+            if (!(data[fk].quadras[q]||{})[l]) continue;
+            pts.push({l, x:c[0]*KX, y:c[1]*KY});
+          }
+          if (pts.length < 6) continue;
+          let mx=0,my=0; pts.forEach(p=>{mx+=p.x;my+=p.y}); mx/=pts.length; my/=pts.length;
+          let sxx=0,sxy=0,syy=0; pts.forEach(p=>{const dx=p.x-mx,dy=p.y-my;sxx+=dx*dx;sxy+=dx*dy;syy+=dy*dy});
+          const ang = 0.5*Math.atan2(2*sxy, sxx-syy);
+          const ux=Math.cos(ang), uy=Math.sin(ang);
+          const proj = (vx,vy)=>{ pts.forEach(p=>{ p.su=(p.x-mx)*ux+(p.y-my)*uy; p.sv=(p.x-mx)*vx+(p.y-my)*vy; }); };
+          // testa os 2 sinais de v: o correto deixa os pins das linhas vizinhas NA BORDA, não no interior
+          // sinal de v: o interior do lote segue o "para baixo" da imagem da prancha, que no georreferenciamento aponta ~para o sul -> vy<0
+          let best=null;
+          for (const sgn of [1,-1]){
+            const vx=-uy*sgn, vy=ux*sgn;
+            const cand={vx,vy,score:(vy<0?0:1)};
+            if (!best || cand.score<best.score) best=cand;
+          }
+          const {vx,vy} = best;
+          proj(vx,vy);
+          const orden=[...pts].sort((a,b)=>a.sv-b.sv);
+          const rows=[]; let cur=[orden[0]];
+          for (let i=1;i<orden.length;i++){ if (orden[i].sv-cur[cur.length-1].sv>8){rows.push(cur);cur=[];} cur.push(orden[i]); }
+          rows.push(cur);
+          rows.forEach(r=>r.sort((a,b)=>a.su-b.su));
+          const rowSv = rows.map(r=>r.reduce((t,p)=>t+p.sv,0)/r.length);
+          if (!window.__qFrames) window.__qFrames=[];
+          window.__qFrames.push({fk,q,ux,uy,vx,vy,mx,my,KX,KY,pins:pts.map(pp=>({l:pp.l,su:pp.su,sv:pp.sv}))});
+          const medDu = r=>{ const ds=[]; for(let i=1;i<r.length;i++) ds.push(r[i].su-r[i-1].su); ds.sort((a,b)=>a-b); return ds.length?ds[Math.floor(ds.length/2)]:10; };
+          const gaps=[]; for (let i=1;i<rowSv.length;i++){ const g=rowSv[i]-rowSv[i-1]; if(g<=40) gaps.push(g); } gaps.sort((a,b)=>a-b);
+          const medDepth = gaps.length?gaps[Math.floor(gaps.length/2)]:25;
+          for (let r=0;r<rows.length;r++){
+            const lastRow = (r+1>=rows.length);
+            const du=medDu(rows[r]);
+            if (!lastRow && (rowSv[r+1]-rowSv[r])>40) continue; // gap grande (rua) entre as linhas -> não extrapolar
+            for (let c=0;c<rows[r].length;c++){
+              const pp=rows[r][c];
+              const su0=pp.su, sv0=pp.sv;
+              let su1, sv1;
+              if (c+1<rows[r].length && (rows[r][c+1].su-su0)<1.8*du){ su1=rows[r][c+1].su; sv1=rows[r][c+1].sv; }
+              else { su1=su0+(c>0?(su0-rows[r][c-1].su):du); sv1=sv0; } // lote de ponta: largura do vizinho
+              let cBL, cBR;
+              if (lastRow){ cBL=[su0,sv0+medDepth]; cBR=[su1,sv1+medDepth]; } // última linha: profundidade mediana da quadra (não cruza outra linha)
+              else {
+                let bl=null, br=null;
+                for (const q2 of rows[r+1]){ const d0=Math.abs(q2.su-su0); if(!bl||d0<bl.d) bl={d:d0,p:q2}; const d1=Math.abs(q2.su-su1); if(!br||d1<br.d) br={d:d1,p:q2}; }
+                if (!bl||!br||bl.d>6||br.d>6) continue; // sem âncoras reais embaixo -> sem polígono
+                cBL=[bl.p.su,bl.p.sv]; cBR=[br.p.su,br.p.sv];
+              }
+              const corners=[[su0,sv0],[su1,sv1],cBR,cBL,[su0,sv0]].map(([su,sv])=>{
+                const px=mx+ux*su+vx*sv, py=my+uy*su+vy*sv; return [px/KX, py/KY];
+              });
+              const lot=(data[fk].quadras[q]||{})[pp.l];
+              const av=RDPStatus.avail(lot), tt=RDPStatus.temTabela(lot);
+              const cat=av==='vendido'?'vendido':av==='reservado'?'reservado':av==='consultar'?'consultar':(av==='livre'||tt)?'livre':'embreve';
+              { const cxs=(corners[0][0]+corners[2][0])/2, cys=(corners[0][1]+corners[2][1])/2;
+                const dPin=Math.hypot((cxs-pinsGeo[fk][q][pp.l][0])*KX,(cys-pinsGeo[fk][q][pp.l][1])*KY);
+                if (dPin<4||dPin>40) continue; } // geometria não confirmada -> sem polígono
+              polys.push({type:'Feature',properties:{fase:fk,quadra:q,lote:pp.l,cat:cat,rotulo:q+'·'+pp.l},geometry:{type:'Polygon',coordinates:[corners]}});
+            }
+          }
+        }
+      }
+    }
+    if (!map.loaded()) await new Promise(r=>map.once('load', r));
+    map.addSource('lotespg',{type:'geojson',data:{type:'FeatureCollection',features:polys}});
+    map.addLayer({id:'lotesv-pg',type:'fill',source:'lotespg',paint:{'fill-color':'#1d4ed8','fill-opacity':0.03}});
+    map.addLayer({id:'lotesv-pgsel',type:'fill',source:'lotespg',filter:['==',['get','rotulo'],'§'],paint:{'fill-color':'#1d4ed8','fill-opacity':0.18}});
+    map.addLayer({id:'lotesv-pgln',type:'line',source:'lotespg',filter:['==',['get','rotulo'],'§'],paint:{'line-color':'#1d4ed8','line-width':3}});
+    map.addSource('lotesv',{type:'geojson',data:{type:'FeatureCollection',features:feats}});
+    map.addLayer({id:'lotesv-pt',type:'circle',source:'lotesv',paint:{
+      'circle-color':['match',['get','cat'],'livre','#22c55e','vendido','#dc2626','reservado','#f97316','consultar','#f59e0b','#9ca3af'],
+      'circle-radius':['interpolate',['linear'],['zoom'],13,2.5,16,4.5,19,7.5],
+      'circle-stroke-width':1.2,'circle-stroke-color':'#ffffff','circle-opacity':0.95}});
+    map.addLayer({id:'lotesv-sel',type:'circle',source:'lotesv',filter:['==',['get','rotulo'],'§'],paint:{
+      'circle-color':'rgba(0,0,0,0)','circle-radius':['interpolate',['linear'],['zoom'],13,6,16,9,19,13],
+      'circle-stroke-width':3,'circle-stroke-color':'#1d4ed8'}});
+    map.addLayer({id:'lotesv-lb',type:'symbol',source:'lotesv',minzoom:18,layout:{
+      'text-field':['get','rotulo'],'text-size':12.5,
+      'text-offset':[0,0.95],'text-anchor':'top','text-font':['Open Sans Semibold'],
+      'text-allow-overlap':true,'text-ignore-placement':true,'text-padding':1},
+      paint:{'text-color':'#111827','text-halo-color':'#ffffff','text-halo-width':1.6}});
+    window.selecionaLote = (fk,q,l)=>{
+      if (!(data[fk] && data[fk].quadras[q] && data[fk].quadras[q][l])) return;
+      faseSel.value=fk; fillQuadras(); quadraSel.value=q; fillLotes();
+      map.setFilter('lotesv-sel',['==',['get','rotulo'],q+'·'+l]);
+      map.setFilter('lotesv-pgsel',['==',['get','rotulo'],q+'·'+l]);
+      map.setFilter('lotesv-pgln',['==',['get','rotulo'],q+'·'+l]);
+      mostraFluxo(fk,q,l);
+    };
+    map.on('click','lotesv-pt',e=>{const p=e.features[0].properties; selecionaLote(p.fase,p.quadra,p.lote);});
+    map.on('click','lotesv-pg',e=>{const p=e.features[0].properties; selecionaLote(p.fase,p.quadra,p.lote);});
+    map.on('click',e=>{
+      const px=e.lngLat.lng, py=e.lngLat.lat;
+      let bestLot=null;
+      for (const Q of (window.__qFrames||[])){
+        const X=px*Q.KX, Y=py*Q.KY;
+        const su=(X-Q.mx)*Q.ux+(Y-Q.my)*Q.uy, sv=(X-Q.mx)*Q.vx+(Y-Q.my)*Q.vy;
+        let cand=null;
+        for (const pp of Q.pins){ if (pp.su<=su+2 && pp.sv<=sv+2){ if(!cand||pp.sv>cand.sv+0.5||((pp.sv>cand.sv-0.5)&&pp.su>cand.su)) cand=pp; } }
+        if (cand){ const d=Math.hypot(su-cand.su, sv-cand.sv); if (d<35 && (!bestLot||d<bestLot.d)) bestLot={d,Q,cand}; }
+      }
+      if (bestLot) selecionaLote(bestLot.Q.fk, bestLot.Q.q, bestLot.cand.l); });
+    map.on('mouseenter','lotesv-pt',()=>{map.getCanvas().style.cursor='pointer';});
+    map.on('mouseleave','lotesv-pt',()=>{map.getCanvas().style.cursor='';});
+    map.on('mouseenter','lotesv-pg',()=>{map.getCanvas().style.cursor='pointer';});
+    map.on('mouseleave','lotesv-pg',()=>{map.getCanvas().style.cursor='';});
+    const lg=document.createElement('div');
+    lg.id='lgdiv';
+    lg.style.cssText='position:absolute;right:8px;top:56px;z-index:900;background:rgba(255,255,255,.93);border-radius:8px;padding:6px 9px;font:12px system-ui;box-shadow:0 1px 6px rgba(0,0,0,.25);line-height:1.85';
+    lg.innerHTML='<div id="lghd"><b style="font-size:11px">Lotes (Jacarandás) <span style="color:#6b7280">▾</span></b></div><div id="lgbd"><span style="color:#16a34a">&#9679;</span> Livre<br><span style="color:#dc2626">&#9679;</span> Vendido<br><span style="color:#f97316">&#9679;</span> Reservado</div>';
+    lg.querySelector('#lghd').onclick=()=>{ lg.classList.toggle('ab'); lg.querySelector('#lghd span').textContent = lg.classList.contains('ab')?'▴':'▾'; };
+    { const setLgTop=()=>{ const h=document.getElementById('hud'); lg.style.top=((h?h.offsetHeight:48)+8)+'px'; }; setLgTop(); addEventListener('resize',setLgTop); }
+    document.getElementById('map').appendChild(lg);
+  } catch(e){ console.warn('pins-geo indisponível', e); }
   fillQuadras();
+  { const detEl=document.getElementById('det'), painelEl=document.getElementById('painel'), notaEl=document.getElementById('nota');
+    const syncAtd=()=>{ setTimeout(()=>{ const b=document.getElementById('atdBtn'); if(!b) return;
+      const mob=matchMedia('(max-width:640px)').matches;
+      let topEl=null;
+      if (detEl && detEl.style.display!=='none' && detEl.offsetHeight>0) topEl=detEl;
+      else if (painelEl && painelEl.offsetHeight>0) topEl=painelEl;
+      else if (notaEl && notaEl.offsetHeight>0) topEl=notaEl;
+      const h = (mob && topEl) ? (window.innerHeight - topEl.getBoundingClientRect().top + 8) : 0;
+      b.classList.toggle('sobe', h>0);
+      document.documentElement.style.setProperty('--deth',(h>0?h:60)+'px');
+    },40); };
+    new MutationObserver(syncAtd).observe(detEl,{attributes:true,subtree:true});
+    if (painelEl) new MutationObserver(syncAtd).observe(painelEl,{attributes:true,subtree:true});
+    if (notaEl) new MutationObserver(syncAtd).observe(notaEl,{attributes:true,subtree:true});
+    window.addEventListener('resize',syncAtd); syncAtd(); }
+  { const prm = new URLSearchParams(location.search), f = prm.get('fase'), q = prm.get('quadra'), l = prm.get('lote');
+    if (f && q && l && data[f] && data[f].quadras[q] && data[f].quadras[q][l] && RDPStatus.avail(data[f].quadras[q][l]) === 'livre' && RDPStatus.temTabela(data[f].quadras[q][l])) vaiParaLote(f, q, l); }
 });
 
 </script>
