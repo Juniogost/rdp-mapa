@@ -24,7 +24,6 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font:16px system-ui;ov
 #zoomfechar{position:fixed;top:12px;right:12px;z-index:51;background:rgba(0,0,0,.6);color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 12px;display:none}
 .pnlm-controls-container{display:none!important}
 #empnome{font-weight:700;font-size:15px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-#sensia{font-size:11px;opacity:.75;margin-top:3px}
 .dica{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.65);padding:10px 16px;border-radius:10px;font-size:13px;z-index:40;pointer-events:none;transition:opacity .6}
 </style></head><body>
 <div id="stage"><div id="pano"></div><img class="ph" id="foto" alt=""></div>
@@ -33,19 +32,19 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font:16px system-ui;ov
 <div id="tod"></div>
 <button class="seta" id="setaE" aria-label="Anterior">‹</button>
 <button class="seta" id="setaD" aria-label="Próxima">›</button>
-<div id="base"><div id="sec"></div><div id="leg"></div><div id="nota"></div><div id="sensia" hidden>No material oficial da Tenda, o Itá Nobre aparece como "Sensia Alameda".</div></div>
+<div id="base"><div id="sec"></div><div id="leg"></div><div id="nota"></div></div>
 <div id="cred">Imagens ilustrativas, material oficial Tenda</div>
 <div id="zoom"><img id="zimg" alt=""></div><button id="zoomfechar">Fechar ✕</button>
 <div class="dica" id="dica" style="opacity:0">Arraste para girar • deslize para trocar</div>
 <script src="vendor/pannellum.js"></script>
-<script src="data.js?v=3"></script>
+<script src="data.js?v=4"></script>
 <script>
 const q=new URLSearchParams(location.search);const EMP=q.get('emp')==='luar'?'luar':'ita';
 const D=TOURDATA.emps[EMP];
 const NOMES={ita:'Itá Nobre',luar:'Novos Ares Luar'};
 document.getElementById('empnome').textContent=NOMES[EMP];
 document.title='Tour do decorado - '+NOMES[EMP]+' | Investe em Lotes';
-if(EMP==='ita')document.getElementById('sensia').hidden=false;
+if(!D){document.getElementById('leg').textContent='Tour em revisão';document.getElementById('nota').textContent='As imagens que estavam aqui eram de outro empreendimento e foram retiradas para conferência com a construtora.';document.getElementById('setaE').style.display='none';document.getElementById('setaD').style.display='none';document.getElementById('cred').style.display='none';throw new Error('tour indisponivel para '+EMP)}
 document.getElementById('voltar').href='../?emp='+EMP;
 const steps=[];
 D.panos.forEach((p,i)=>steps.push({tipo:'pano',src:p.src,tod:p.tod,primeiro:i===0||p.tod!==D.panos[i-1].tod}));
