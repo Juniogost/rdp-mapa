@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Espelho de vendas — Reserva do Parque (teste)</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Reserva do Parque">
+<meta property="og:title" content="Espelho de vendas do Reserva do Parque">
+<meta property="og:description" content="Cada quadrado é um lote, com a cor da situação dele. Toque no lote para ver metragem, valores e formas de pagamento. Tabela novembro/2026.">
+<meta property="og:url" content="https://juniogost.github.io/rdp-mapa/espelho/">
+<meta property="og:image" content="https://juniogost.github.io/rdp-mapa/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#faf9f9;font-family:system-ui,-apple-system,sans-serif;color:#251f21}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 14px 40px}
+  .hero{border-radius:14px;overflow:hidden;margin:8px 0 14px}
+  .hero img{width:100%;display:block}
+  h1{font-size:20px;margin:6px 0 2px}
+  .fact{display:inline-block;background:#eef6f3;color:#2f6f5f;font-weight:700;font-size:12px;border-radius:999px;padding:3px 10px;margin:4px 0}
+  .intro{font-size:13px;color:#585254;margin:6px 0 4px;line-height:1.45}
+  .group{margin-top:18px}
+  .group>h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#8a8385;margin:0 0 8px}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:96px;min-height:44px;border-radius:10px;border:1px solid #eae9ea;background:#fff;font:600 14px/1 system-ui,-apple-system,sans-serif;color:#251f21;cursor:pointer}
+  .seg button.sel{background:#251f21;color:#fff;border-color:#251f21}
+  .caption{font-size:12px;color:#8a8385;margin:8px 0 0}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;line-height:20px;color:#585254;margin-top:8px}
+  .legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
+  .chip{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 12px;border-radius:8px;border:1px solid #eae9ea;background:#fff;font:600 13px/1 system-ui,-apple-system,sans-serif;color:#251f21;cursor:pointer}
+  .chip.sel{background:#251f21;color:#fff;border-color:#251f21}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;margin-top:12px}
+  .lot{aspect-ratio:1;min-height:44px;border:0;border-radius:6px;font:600 12px/1 system-ui,-apple-system,sans-serif;color:#fff;cursor:pointer;padding:0}
+  .lot.livre{background:#16a34a}
+  .lot.vendido{background:#dc2626}
+  .lot.reservado{background:#f97316}
+  .lot.consultar{background:#f59e0b}
+  .lot.fechado{background:#e7e5e4;color:#78716c}
+  .grid.filtrada .lot:not(.livre){opacity:.15}
+  .lot.escolhido{outline:3px solid #251f21;outline-offset:1px}
+  .panel{margin-top:16px;border:1px solid #eae9ea;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;background:#fff}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+  .panel-x{border:0;background:none;font-size:16px;color:#585254;cursor:pointer;min-width:44px;min-height:44px}
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+  .facts div{font-size:13px}
+  .facts .fl{color:#8a8385;display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .price-block{display:flex;flex-direction:column;gap:12px}
+  .price-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .price-line span{color:#585254;font-size:13px}
+  .price-line .price{font-size:21px;color:#73a89a}
+  .price-line.sub strong{font-size:15px}
+  .plan{border-top:1px solid #eae9ea;padding-top:10px;font-size:13px;color:#251f21}
+  .plan ul{margin:6px 0;padding-left:18px;color:#585254}
+  .prazos{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:13px;color:#585254}
+  .prazos b{color:#251f21}
+  .callout{border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.45}
+  .callout strong{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+  .callout.warning{background:#fef6e7;color:#7c5a12}
+  .callout.note{background:#eef2f6;color:#41505f}
+  .wa{display:block;text-align:center;background:#25d366;color:#fff;font-weight:700;font-size:15px;border-radius:10px;padding:14px;text-decoration:none}
+  .closing{font-size:11px;color:#8a8385;margin-top:26px;line-height:1.5;border-top:1px solid #eae9ea;padding-top:12px}
+  .maplinks{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .maplinks a{flex:1;min-width:140px;text-align:center;background:#fff;border:1px solid #eae9ea;border-radius:8px;padding:8px 6px;font-weight:600;font-size:12px;color:#14532d;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Espelho de vendas do Reserva do Parque</h1>
+  <span class="fact">Tabela novembro/2026</span>
+  <p class="intro">Cada quadrado é um lote, com a cor da situação dele. Toque no lote para ver metragem, valores, formas de pagamento e o botão direto para o WhatsApp.</p>
+  <div class="hero"><img src="hero.jpg" alt="Marca do Reserva do Parque, loteamento do Grupo NB em Senador Canedo"></div>
+  <div class="maplinks">
+    <a href="../">← Mapa de lotes</a>
+    <a href="../mapa3d/">Visão 3D + Sol</a>
+    <a href="../geral.html">Visão geral</a>
+  </div>
+
+  <div class="group">
+    <h2>Fase</h2>
+    <div class="seg" id="fases"></div>
+    <p class="caption" id="resumo"></p>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="group">
+    <h2>Quadra</h2>
+    <div class="chips" id="chips" role="tablist" aria-label="Quadras"></div>
+    <div class="seg" id="filtro" style="margin-top:8px">
+      <button data-v="todos" class="sel">Todos os lotes</button>
+      <button data-v="livres">Destacar só os livres</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="caption" id="qcap"></p>
+    <div id="panelhost"></div>
+  </div>
+
+  <div class="group">
+    <h2>Antes de decidir</h2>
+    <div class="callout warning"><strong>Disponibilidade</strong>
+      Os valores vêm da tabela de preços da incorporadora vigente em novembro/2026 e a disponibilidade do mapa de <span id="atual"></span>. Nada é reservado por esta página: a confirmação final do lote e das condições é feita no WhatsApp.
+    </div>
+  </div>
+
+  <p class="closing">Fonte: tabela de preços novembro/2026 e mapa de disponibilidade da incorporadora (<span id="atual2"></span>). Página de teste, não publicada.</p>
+</div>
+
+<script>
+const ZAP='5562982165619';
+const STATUS_LABEL={livre:'Livre',reservado:'Reservado',vendido:'Vendido',consultar:'Confirmar',fechado:'Não liberado'};
+const FASE_KEYS=['jacarandas','aroeiras','angicos'];
+const FASE_SHORT={jacarandas:'Jacarandás',aroeiras:'Aroeiras',angicos:'Angicos'};
+let DATA=null, faseKey='jacarandas', quadraNum=null, soLivres='todos', sel=null;
+
+const $=id=>document.getElementById(id);
+const fmtM2=m2=>((Number.isInteger(m2)?String(m2):String(m2).replace('.',','))+' m²');
+const waLink=t=>`https://wa.me/${ZAP}?text=${encodeURIComponent(t)}`;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+function primeiraComLivre(fk){const f=DATA.fases[fk];const q=f.quadras.find(qd=>qd.lots.some(l=>l.a==='livre'||l.a==='consultar'));return q?q.q:f.quadras[0].q;}
+
+function renderFases(){
+  $('fases').innerHTML=FASE_KEYS.map(k=>`<button data-k="${k}" class="${k===faseKey?'sel':''}">${FASE_SHORT[k]}</button>`).join('');
+  $('fases').querySelectorAll('button').forEach(b=>b.onclick=()=>{faseKey=b.dataset.k;quadraNum=primeiraComLivre(faseKey);sel=null;renderAll();});
+}
+function renderLegend(){
+  const items=[['livre','#16a34a'],['reservado','#f97316'],['vendido','#dc2626'],['consultar','#f59e0b'],['fechado','#d6d3d1']];
+  $('legend').innerHTML=items.map(([k,c])=>`<span><i class="dot" style="background:${c}"></i>${STATUS_LABEL[k]}</span>`).join('');
+}
+function renderChips(){
+  const f=DATA.fases[faseKey];
+  $('chips').innerHTML=f.quadras.map(qd=>{
+    const n=qd.lots.filter(l=>l.a==='livre').length;
+    return `<button role="tab" aria-selected="${qd.q===quadraNum}" class="chip${qd.q===quadraNum?' sel':''}" data-q="${qd.q}">Q${qd.q}${n>0?` · ${n}`:''}</button>`;
+  }).join('');
+  $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{quadraNum=+b.dataset.q;sel=null;renderAll();});
+}
+function quadraAtual(){const f=DATA.fases[faseKey];return f.quadras.find(q=>q.q===quadraNum)||f.quadras[0];}
+function renderResumo(){
+  const c=DATA.fases[faseKey].counts;
+  $('resumo').textContent=`${c.livre||0} livres · ${c.consultar||0} a confirmar · ${c.vendido||0} vendidos · disponibilidade de ${DATA.atualizado_em}`;
+}
+function renderGrid(){
+  const qd=quadraAtual();
+  $('grid').className='grid'+(soLivres==='livres'?' filtrada':'');
+  $('grid').innerHTML=qd.lots.map(lot=>`<button class="lot ${lot.a}${sel===lot.l?' escolhido':''}" data-l="${lot.l}" aria-label="Lote ${lot.l}, ${STATUS_LABEL[lot.a]}">${lot.l}</button>`).join('');
+  $('grid').querySelectorAll('button').forEach(b=>b.onclick=()=>{sel=+b.dataset.l;renderAll();setTimeout(()=>$('panelhost').scrollIntoView({behavior:'smooth',block:'nearest'}),50);});
+  $('qcap').textContent=`Quadra ${qd.q}: ${qd.lots.length} lotes, ${qd.lots.filter(l=>l.a==='livre').length} livres.`;
+}
+function renderPanel(){
+  const host=$('panelhost');
+  const qd=quadraAtual();
+  const lot=sel!=null?qd.lots.find(l=>l.l===sel):null;
+  if(!lot){host.innerHTML='';return;}
+  const fase=DATA.fases[faseKey];
+  const plano=lot.plan?fase.planos[`${qd.q}-${lot.l}`]:undefined;
+  const id=`Quadra ${qd.q}, lote ${lot.l}`;
+  const textoLivre=`Olá! Vi o espelho de vendas do Reserva do Parque e quero confirmar a disponibilidade do lote da quadra ${qd.q}, lote ${lot.l} (${fase.label}, ${fmtM2(lot.m2)}). Pode me passar as condições?`;
+  const textoOutro=`Olá! Vi o espelho de vendas do Reserva do Parque e quero saber mais sobre o lote da quadra ${qd.q}, lote ${lot.l} (${fase.label}).`;
+  let html=`<div class="panel" role="dialog" aria-label="Detalhes do lote ${lot.l}">
+    <div class="panel-head"><strong>${id} · ${fase.label}</strong><button class="panel-x" id="px" aria-label="Fechar detalhes">✕</button></div>
+    <div class="facts">
+      <div><span class="fl">Situação</span>${STATUS_LABEL[lot.a]==='Confirmar'?'Confirmar disponibilidade':STATUS_LABEL[lot.a]}</div>
+      <div><span class="fl">Área</span>${fmtM2(lot.m2)}</div>
+      <div><span class="fl">Frente</span>${String(lot.fr).replace('.',',')} m</div>
+      <div><span class="fl">Rua</span>${esc(lot.rua)}</div>
+    </div>`;
+  if(lot.a==='livre'&&plano){
+    html+=`<div class="price-block">
+      <div class="price-line"><span>Valor à vista</span><strong class="price">R$ ${plano.cash}</strong></div>
+      <div class="price-line sub"><span>Valor para proposta</span><strong>R$ ${plano.prop}</strong></div>
+      <div class="plan"><strong>Entrada 1 + 3 (1ª parcela em 120 dias)</strong>
+        <ul>
+          <li>Sinal (ato): R$ ${plano.ato}${plano.ent13?` · Entrada: R$ ${plano.ent13}`:''}</li>
+          <li>Comissão (30/60/90 dias): 3x de R$ ${plano.com3}</li>
+          <li>Taxa administrativa: R$ ${plano.spe}</li>
+        </ul>
+        <div class="prazos">${fase.prazos13.map((p,i)=>`<span><b>${p}x</b> R$ ${plano.par[i]}</span>`).join('')}</div>
+      </div>
+      <div class="plan"><strong>Entrada à vista (1ª parcela em 30 dias)</strong>
+        <ul>
+          <li>Valor: R$ ${plano.avprop} · Entrada: R$ ${plano.ent}</li>
+          <li>Taxa administrativa: R$ ${plano.spe}</li>
+        </ul>
+        <div class="prazos">${fase.prazosAv.map((p,i)=>`<span><b>${p}x</b> R$ ${plano.av[i]}</span>`).join('')}</div>
+      </div>
+    </div>`;
+  }
+  if(lot.a==='livre'&&!plano) html+=`<div class="callout note"><strong>Sem condições na tabela</strong>Este lote está livre no mapa, mas não tem valores na tabela de novembro/2026. Confirme as condições no WhatsApp.</div>`;
+  if(lot.a==='consultar') html+=`<div class="callout warning"><strong>Confirmar antes</strong>Consta na tabela de novembro/2026, mas o mapa da incorporadora o marca como vendido ou reservado. A disponibilidade real precisa ser confirmada no WhatsApp.</div>`;
+  if(lot.a==='reservado') html+=`<div class="callout note"><strong>Reservado</strong>Este lote tem uma reserva em andamento. Pergunte no WhatsApp se ainda há chance.</div>`;
+  if(lot.a==='vendido') html+=`<div class="callout note"><strong>Vendido</strong>Este lote já foi vendido. Veja os lotes livres da mesma quadra ou pergunte no WhatsApp por opções parecidas.</div>`;
+  if(lot.a==='fechado') html+=`<div class="callout note"><strong>Quadra não liberada</strong>Esta quadra ainda não foi liberada para venda pela incorporadora, por isso não tem valores. Pergunte no WhatsApp sobre o lançamento.</div>`;
+  html+=`<a class="wa" href="${waLink(lot.a==='livre'?textoLivre:textoOutro)}" target="_blank" rel="noopener">${lot.a==='livre'?'Consultar este lote no WhatsApp':'Perguntar no WhatsApp'}</a>
+    <p class="caption">Valores da tabela da incorporadora de novembro/2026. A disponibilidade e as condições finais são confirmadas no WhatsApp.</p>
+  </div>`;
+  host.innerHTML=html;
+  $('px').onclick=()=>{sel=null;renderAll();};
+}
+function renderAll(){renderFases();renderResumo();renderChips();renderGrid();renderPanel();}
+
+fetch('data.json').then(r=>r.json()).then(d=>{
+  DATA=d;
+  $('atual').textContent=d.atualizado_em;
+  $('atual2').textContent=d.atualizado_em;
+  quadraNum=primeiraComLivre(faseKey);
+  renderLegend();
+  renderAll();
+});
+$('filtro').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  soLivres=b.dataset.v;
+  $('filtro').querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x===b));
+  renderGrid();
+});
+</script>
+</body>
+</html>
